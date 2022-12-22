@@ -59,29 +59,6 @@ or
 sudo zypper install graphviz
 ```
 
-Install irace
-
-```
-sudo yum install r-base
-```
-
-or
-
-```
-sudo apt install r-base
-```
-
-or
-
-```
-sudo zypper install R-base
-```
-
-then
-
-```
-echo "install.packages('irace', repos='http://cran.us.r-project.org')" | R --no-save
-```
 
 ### Install deps windows:
 
@@ -116,12 +93,6 @@ or
 
 ```
 docker run -e RUN_DEFAULT_EXP='True' -d stock-pred:2.0.0
-```
-
-or
-
-```
-docker run -e RUN_IRACE_NAS='True' -d stock-pred:2.0.0
 ```
 
 ## Running with Docker-Compose TODO
@@ -161,7 +132,7 @@ docker stop $(docker container ls | grep stock-pred | cut -f 1 -d' ' | head -n 1
 ### To copy experiment results compressed
 
 ```
-docker exec -it $(docker container ls | grep stock-pred | cut -f 1 -d' ' | head -n 1) bash -c "tar -zcvf /code/exp.tar.gz /code/datasets /code/saved_models /code/saved_plots /code/irace /code/log.txt"
+docker exec -it $(docker container ls | grep stock-pred | cut -f 1 -d' ' | head -n 1) bash -c "tar -zcvf /code/exp.tar.gz /code/saved_plots/"
 docker cp $(docker container ls | grep stock-pred | cut -f 1 -d' ' | head -n 1):/code/exp.tar.gz .
 ```
 
