@@ -1,11 +1,12 @@
 import hashlib
-import math
 import os
+import platform
 import shutil
 import sys
 from enum import Enum
 from typing import Any, Union, Optional, Type
 
+import math
 import numpy as np
 
 from utils_random import randInt
@@ -32,6 +33,24 @@ def getPythonExecName() -> str:
     if shutil.which(short_name) is not None:
         return short_name
     return default_name
+
+
+def getOsName() -> str:
+    os_name = sys.platform
+    if 'linux' in os_name:
+        return 'linux'
+    elif 'darwin' in os_name:
+        return 'mac'
+    elif 'win' in os_name:
+        return 'windows'
+    else:
+        return os_name
+
+
+def isAppleSilicon() -> bool:
+    if getOsName() != 'mac':
+        return False
+    return platform.processor() == 'arm'
 
 
 def getRunId() -> int:

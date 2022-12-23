@@ -108,4 +108,3 @@ maybeBlockPlots()
 
 # TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
 #  - sobreescrever metricas com callback / metrics melhores
-#  - main

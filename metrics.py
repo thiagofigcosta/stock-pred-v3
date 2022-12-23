@@ -1,9 +1,9 @@
-import math
 import os
 import warnings
 from enum import Enum, auto
 from typing import Union, Callable, Optional
 
+import math
 import numpy as np
 from sklearn import metrics as sk_metrics
 from sklearn.exceptions import UndefinedMetricWarning

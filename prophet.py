@@ -1,7 +1,7 @@
-import math
 import os
 from typing import Union, Optional
 
+import math
 import numpy as np
 
 from hyperparameters import Hyperparameters
@@ -633,7 +633,8 @@ class Prophet(object):
         filename_no_ext = removeFileExtension(basename)
         filename_changed = ''
         if not filename_no_ext.strip().endswith('.') and filename_no_ext.strip() != '':
-            keras_placeholders = '_'  # '_{epoch:06d}_{val_loss}' # TODO for this i have to search for the best loss when loading
+            # '_{epoch:06d}_{val_loss}' # TODO for this i have to search for the best loss when loading
+            keras_placeholders = ''
             filename_changed = f'{filename_no_ext}' + keras_placeholders + '_cp.h5'
         return pathJoin(MODELS_DIR, path_subdir, CHECKPOINT_SUBDIR, filename_changed)
 

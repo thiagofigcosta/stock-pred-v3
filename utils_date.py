@@ -83,3 +83,15 @@ def getNextStrWorkDays(from_date: str, n_days: int, date_format: str = SAVE_DATE
     if cast_output:
         dates = [dateObjToDateStr(date, date_format) for date in dates]
     return dates
+
+
+def getDiffInYearsFromStrDate(date1: str, date2: str, date_format: str = HUMAN_DATE_FORMAT) -> int:
+    date_bigger_obj = dateStrToDateObj(date1, date_format)
+    date_smaller_obj = dateStrToDateObj(date2, date_format)
+    if date_smaller_obj > date_bigger_obj:
+        date_bigger_obj, date_smaller_obj = date_smaller_obj, date_bigger_obj
+    years = date_bigger_obj.year - date_smaller_obj.year
+    if date_bigger_obj.month < date_smaller_obj.month or (
+            date_bigger_obj.month == date_smaller_obj.month and date_bigger_obj.day < date_smaller_obj.day):
+        years -= 1
+    return years
