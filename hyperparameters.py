@@ -15,7 +15,7 @@ from utils_random import randInt
 HYPERPARAMETERS_DIR = 'hyperparameters'
 
 
-class SubParameters(object):  # TODO: create class for each wrapper, I didn't since im lazy
+class SubParameters(object):
     pass
 
 

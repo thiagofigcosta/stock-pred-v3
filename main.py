@@ -14,20 +14,24 @@ from utils_misc import isAppleSilicon
 def dataMiningPreset() -> list:
     alg = GAAlgorithm.NSGA2.setObjs(3)
     agg = AggregationMethod.VOTING_EXP_F_WEIGHTED_AVERAGE
-    return runNas('goog', '01/01/2018', '30/11/2022', 'MidSearchSpace', 30, 30, 100, ga_alg=alg, agg_method=agg)
+    return runNas('goog', '01/01/2018', '30/11/2022', 'MidSearchSpace', 100, 30, ga_alg=alg, agg_method=agg)
 
 
 def fastPreset() -> list:
     alg = GAAlgorithm.NSGA3.setObjs(5)
+    ref_dir_configs = (-1, 1)
+    pop_sz = 126
+    max_gens = 10
     agg = AggregationMethod.VOTING_EXP_F_WEIGHTED_AVERAGE
-    parallel = 2
-    return runNas('goog', '01/01/2018', '30/11/2022', 'Fast', 4, 4, 8, ga_alg=alg, agg_method=agg,
-                  nas_parallelism=parallel, lstm_parallelism=parallel)
+    nas_parallelism, lstm_parallelism = 6, 2
+    return runNas('goog', '01/01/2018', '30/11/2022', 'FastOne', pop_sz * max_gens, pop_sz, ga_alg=alg, agg_method=agg,
+                  nas_parallelism=nas_parallelism, lstm_parallelism=lstm_parallelism, ref_dir_configs=ref_dir_configs)
 
 
-def runNas(ticker: str, start_date: str, end_date: str, ss_id: Union[str, int], pop_sz: int, children_sz: int,
-           max_eval: int, train_ratio: Optional[bool] = None, validation_ratio: Optional[bool] = None,
-           rm_duplicates: bool = True, ga_alg: Optional[GAAlgorithm] = None,
+def runNas(ticker: str, start_date: str, end_date: str, ss_id: Union[str, int], max_eval: int, pop_sz: int,
+           children_sz: Optional[int] = None, train_ratio: Optional[bool] = None,
+           validation_ratio: Optional[bool] = None, rm_duplicates: bool = True, ga_alg: Optional[GAAlgorithm] = None,
+           ref_dir_configs: Optional[tuple[float, float]] = None,
            agg_method: AggregationMethod = AggregationMethod.VOTING_EXP_F_WEIGHTED_AVERAGE,
            fib_sz: Optional[int] = 20, k_pca: bool = True, nas_parallelism: Optional[int] = None,
            lstm_parallelism: Optional[int] = None, nas_verbose: bool = True, lstm_verbose: bool = False,
@@ -40,7 +44,8 @@ def runNas(ticker: str, start_date: str, end_date: str, ss_id: Union[str, int], 
         tf.get_logger().setLevel('ERROR')
         tf.autograph.set_verbosity(3)
         tf.get_logger().setLevel(logging.ERROR)
-    logger.configure(name='stock-pred-v3-nas', verbose=nas_verbose or lstm_verbose)
+    level = logger.Level.VERBOSE if nas_verbose or lstm_verbose else logger.Level.INFO
+    logger.configure(name='stock-pred-v3-nas', level=level)
     if train_ratio is None or validation_ratio is None:
         year_diff = getDiffInYearsFromStrDate(end_date, start_date)
         if year_diff < 5:
@@ -77,7 +82,8 @@ def runNas(ticker: str, start_date: str, end_date: str, ss_id: Union[str, int], 
                                                    encode=False)
     search_space = getSearchSpaceById(ss_id, dataset_filepath, 'pymoo_{gen}_{id}')
     enriched_search_space = Hyperparameters.enrichSearchSpace(search_space)
-    nas_opt = ProphetNAS(enriched_search_space, processed_data, pop_sz, children_sz, rm_duplicates, agg_method)
+    nas_opt = ProphetNAS(enriched_search_space, processed_data, pop_sz, children_sz, rm_duplicates, agg_method,
+                         ref_dir_configs)
     sol = nas_opt.optimize(max_eval, parallelism=nas_parallelism)
     nas_opt.save()
     Prophet.PARALLELISM = old_lstm_parallelism

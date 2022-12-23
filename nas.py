@@ -16,7 +16,6 @@ from pymoo.core.result import Result
 from pymoo.core.variable import Integer, Real, Binary, Choice
 from pymoo.factory import get_reference_directions
 from pymoo.optimize import minimize
-from pymoo.util.display.progress import ProgressBar
 from pymoo.visualization.heatmap import Heatmap
 from pymoo.visualization.pcp import PCP
 from pymoo.visualization.petal import Petal
@@ -116,10 +115,9 @@ class DisplayCallback(Callback):
         super().__init__()
         self.output = algorithm.output
         self.verbose = verbose
-        self.progress = ProgressBar()
 
     def update(self, algorithm, **kwargs):
-        output, progress = self.output, self.progress
+        output = self.output
         if self.verbose and output:
             text = ""
             header = not output.is_initialized
@@ -128,13 +126,9 @@ class DisplayCallback(Callback):
                 text += output.header(border=True) + '\n'
             text += output.text()
             clean(text)
-        if progress:
-            perc = algorithm.termination.perc
-            progress.set(perc)
 
     def finalize(self):
-        if self.progress:
-            self.progress.close()
+        pass
 
 
 class ProphetNAS(ProblemClass):
@@ -143,11 +137,13 @@ class ProphetNAS(ProblemClass):
     VERBOSE_CALLBACKS = False
 
     ALGORITHM = GAAlgorithm.NSGA3.setObjs(5)
-    REFERENCE_DIR_SETTINGS = (1, 1)  # n_parts = floor(n_dims*REFERENCE_DIR_SETTINGS[1] + REFERENCE_DIR_SETTINGS[0])
+    # n_partitions = floor(n_dims*REFERENCE_DIR_SETTINGS[1] + REFERENCE_DIR_SETTINGS[0])
+    DEFAULT_REFERENCE_DIR_SETTINGS = (1, 1)
 
     def __init__(self, search_space: SearchSpace, processed_data: ProcessedDataset, pop_size: int = 50,
-                 children_per_gen: int = 50, eliminate_duplicates: bool = False,
-                 agg_method: Union[str, AggregationMethod] = AggregationMethod.VOTING_EXP_F_WEIGHTED_AVERAGE, **kwargs):
+                 children_per_gen: Optional[int] = None, eliminate_duplicates: bool = False,
+                 agg_method: Union[str, AggregationMethod] = AggregationMethod.VOTING_EXP_F_WEIGHTED_AVERAGE,
+                 ref_dir_configs: Optional[tuple[float, float]] = None, **kwargs):
         info(f'Instantiating the {ProphetNAS.ALGORITHM}\'s problem...')
         variables = {}
         for dimension in search_space:
@@ -167,6 +163,10 @@ class ProphetNAS(ProblemClass):
                 pass
             else:
                 raise ValueError(f'Unknown SearchSpace.Type')
+        if children_per_gen is None:
+            children_per_gen = pop_size
+        if ref_dir_configs is None:
+            ref_dir_configs = ProphetNAS.DEFAULT_REFERENCE_DIR_SETTINGS
 
         alg_kwargs = dict(
             pop_size=pop_size,
@@ -176,7 +176,7 @@ class ProphetNAS(ProblemClass):
                 eliminate_duplicates=(MixedVariableDuplicateElimination() if eliminate_duplicates else None)),
             eliminate_duplicates=(MixedVariableDuplicateElimination() if eliminate_duplicates else None),
         )
-        ref_dirs = None
+        ref_directions = None
         n_partitions = None
         n_obj = ProphetNAS.ALGORITHM.getObjs()
         if ProphetNAS.ALGORITHM == GAAlgorithm.GA:
@@ -188,10 +188,10 @@ class ProphetNAS(ProblemClass):
             alg_args = []
         elif ProphetNAS.ALGORITHM == GAAlgorithm.NSGA3:
             alg = NSGA3
-            b, a = ProphetNAS.REFERENCE_DIR_SETTINGS
+            b, a = ref_dir_configs
             n_partitions = int(math.floor(n_obj * a + b))
-            ref_dirs = get_reference_directions("das-dennis", n_obj, n_partitions=12)
-            alg_args = [ref_dirs]
+            ref_directions = get_reference_directions("das-dennis", n_obj, n_partitions=n_partitions)
+            alg_args = [ref_directions]
         else:
             raise ValueError(f'Unknown {ProphetNAS.ALGORITHM} ')
 
@@ -206,8 +206,9 @@ class ProphetNAS(ProblemClass):
         self.max_eval = None
         self.history = None
         self.solution = None
-        self.ref_dirs = ref_dirs
+        self.ref_directions = ref_directions
         self.n_partitions = n_partitions
+        self.n_directions = None if ref_directions is None else len(ref_directions)
         self.agg_method = agg_method
         self.pop_size = pop_size
         self.children_per_gen = children_per_gen
@@ -330,8 +331,8 @@ class ProphetNAS(ProblemClass):
         warnings.filterwarnings("ignore")
         plot_kwargs = dict(tight_layout=True, figsize=(18, 16),
                            cmap=getCMap("tab10"))
-        if self.ref_dirs is not None:
-            F = self.pareto_front(self.ref_dirs)
+        if self.ref_directions is not None:
+            F = self.pareto_front(self.ref_directions)
         else:
             F = self.pareto_front()
         labels = [key for key in res.opt[0].X.keys() if key in self.vars]
@@ -405,6 +406,7 @@ class ProphetNAS(ProblemClass):
             'max_eval': self.max_eval[0],
             'agg_method': self.agg_method,
             'n_partitions': self.n_partitions,
+            'n_directions': self.n_directions,
             'pop_size': self.pop_size,
             'children_per_gen': self.children_per_gen,
             'eliminate_duplicates': self.eliminate_duplicates,
@@ -439,7 +441,7 @@ class ProphetNAS(ProblemClass):
             individual['n_features'] = n_features
             hyperparameters = Hyperparameters.parseDna(individual, search_space)
             if hyperparameters.name is not None:
-                hyperparameters.name = hyperparameters.name.replace('{gen}', str(gen), 1).replace('{id}', i, 1)
+                hyperparameters.name = hyperparameters.name.replace('{gen}', str(gen), 1).replace('{id}', str(i), 1)
                 hyperparameters.refreshUuids()
 
             if train_mode <= 1:  # train and test or just train

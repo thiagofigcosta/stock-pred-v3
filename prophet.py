@@ -20,13 +20,13 @@ from utils_persistance import saveJson, loadJson, loadObj
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # DISABLE TENSORFLOW WARNING
 import tensorflow as tf
-from tensorflow import keras  # import keras
+from tensorflow import keras
 from keras.models import Sequential, load_model
 from keras.utils import plot_model
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint, History
 from keras.layers import LSTM, Dropout, Dense, LeakyReLU
 from keras.optimizers import Adam, SGD, RMSprop
-from keras.callbacks import Callback  # from tensorflow.keras.callbacks import Callback
+from keras.callbacks import Callback
 from keras.regularizers import L1L2
 
 MODELS_DIR = 'models'
@@ -38,73 +38,31 @@ PROPHET_DIR = 'prophets'
 
 
 class CustomCallback(Callback):
+    other_cb_functions = """
+        def on_train_begin(self, logs=None):
+        def on_train_end(self, logs=None):
+        def on_epoch_begin(self, epoch, logs=None):
+        def on_test_begin(self, logs=None):
+        def on_test_end(self, logs=None):
+        def on_predict_begin(self, logs=None):
+        def on_predict_end(self, logs=None):
+        def on_train_batch_begin(self, batch, logs=None):
+        def on_train_batch_end(self, batch, logs=None):
+        def on_test_batch_begin(self, batch, logs=None):
+        def on_test_batch_end(self, batch, logs=None):
+        def on_predict_batch_begin(self, batch, logs=None):
+        def on_predict_batch_end(self, batch, logs=None):
+    """
 
     def __init__(self, is_verbose: bool = False, is_stateful: bool = False):
         super().__init__()
         self.verbose = is_verbose
         self.is_stateful = is_stateful
 
-    def upsertMetric(self, name: str, value: float, is_val: bool):
-        if is_val:
-            name = f'val_{name}'
-        with self.summary_writer.as_default():
-            tf.summary.scalar(name, value, step=self.epoch)
-            self.summary_writer.flush()
-
-    def on_train_begin(self, logs=None):
-        pass
-
-    def on_train_end(self, logs=None):
-        pass
-
-    def on_epoch_begin(self, epoch, logs=None):
-        pass
-
     def on_epoch_end(self, epoch, logs=None):
         if self.is_stateful:
             verbose('Resetting LSTM states...', self.verbose)
             self.model.reset_states()
-        # TODO https://keras.io/examples/keras_recipes/sklearn_metric_callbacks/
-        #  self.epoch += 1
-        #  self.keras_metric.reset_state()
-        #  predictions = self.model.predict(self.x_test)
-        #  jaccard_value = jaccard_score(
-        #      np.argmax(predictions, axis=-1), self.y_test, average=None
-        #   )
-        #  self.keras_metric.update_state(jaccard_value)
-        #  self._write_metric(
-        #      self.keras_metric.name, self.keras_metric.result().numpy().astype(float)
-        #  )
-
-    def on_test_begin(self, logs=None):
-        pass
-
-    def on_test_end(self, logs=None):
-        pass
-
-    def on_predict_begin(self, logs=None):
-        pass
-
-    def on_predict_end(self, logs=None):
-        pass
-
-    def on_train_batch_begin(self, batch, logs=None):
-        pass
-
-    def on_train_batch_end(self, batch, logs=None):
-        pass
-
-    def on_test_batch_begin(self, batch, logs=None):
-        pass
-
-    def on_test_batch_end(self, batch, logs=None):
-        pass
-
-    def on_predict_batch_begin(self, batch, logs=None):
-        pass
-
-    def on_predict_batch_end(self, batch, logs=None):
-        pass
 
 
 def parseKerasHistory(history: History) -> dict:
@@ -592,6 +550,28 @@ class Prophet(object):
     def getProphetFilepath(self) -> str:
         return Prophet._getProphetFilepath(self.basename, self.path_subdir)
 
+    def enhancedLoss(self, loss_name):
+        # TODO ADAPT THIS TO OUR CONTEXT
+        USE_ALL_INSTEAD_OF_ANY = True
+        LOSS_NEGATIVE_LABEL_WEIGHT = 0.3
+        LOSS_POSITIVE_LABEL_WEIGHT = 1.0
+
+        def loss(y_true, y_pred):
+            loss_fn = tf.keras.losses.get(loss_name)
+            loss_v = loss_fn(y_true, y_pred)
+            loss_negative_label = loss_v * LOSS_NEGATIVE_LABEL_WEIGHT
+            loss_positive_label = loss_v * LOSS_POSITIVE_LABEL_WEIGHT
+            cond = tf.keras.backend.greater_equal(y_true, 1)
+            if USE_ALL_INSTEAD_OF_ANY:
+                cond = tf.keras.backend.all(cond, axis=1)
+            else:
+                cond = tf.keras.backend.any(cond, axis=1)
+            # returns loss_positive_label when all y_true>=1 (or one of them for any)
+            loss_v = tf.keras.backend.switch(cond, loss_positive_label, loss_negative_label)
+            return loss_v
+
+        return loss
+
     @staticmethod
     def genProphetBasename(configs: Hyperparameters, basename: Optional[str] = None, include_rid: bool = False,
                            include_counter: bool = False, include_net_id: bool = True) -> str:
@@ -603,7 +583,7 @@ class Prophet(object):
                            f'-{str(Prophet._new_model_counter) if include_counter else ""}'
                 if include_counter:
                     Prophet._new_model_counter += 1
-        elif configs.name is not None:
+        elif configs.name is not None and basename != configs.name:
             basename = f'{basename}-{configs.name}'
         if include_net_id:
             basename += f'-{configs.network_uuid}'

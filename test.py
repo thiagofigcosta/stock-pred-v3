@@ -76,7 +76,7 @@ x = aggregateDecodedPredictions(x, AggregationMethod.FIRST)
 print(f'Aggregated predictions: {x}')
 print()
 
-configure(name='stock-pred-v3-test', verbose=True)
+configure(name='stock-pred-v3-test', level=True)
 
 ticker = 'goog'
 start_date = '01/01/2010'
@@ -105,6 +105,3 @@ prophet = Prophet.load(prophet_to_load_path)
 predictions = prophet.prophesize(processed_data)
 
 maybeBlockPlots()
-
-# TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
-#  - sobreescrever metricas com callback / metrics melhores

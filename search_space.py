@@ -369,6 +369,8 @@ _SEARCH_SPACES_MAP = {
     'SearchSpace-2': 2,
     #
     'FastOne': 3,
+    'Fast': 3,
+    'SearchSpace-3': 3,
 }
 _SEARCH_SPACES_MAP = {k.lower(): v for k, v in _SEARCH_SPACES_MAP.items()}
 
