@@ -633,7 +633,8 @@ class Prophet(object):
         filename_no_ext = removeFileExtension(basename)
         filename_changed = ''
         if not filename_no_ext.strip().endswith('.') and filename_no_ext.strip() != '':
-            filename_changed = f'{filename_no_ext}_cp.h5'
+            keras_placeholders = '_'  # '_{epoch:06d}_{val_loss}' # TODO for this i have to search for the best loss when loading
+            filename_changed = f'{filename_no_ext}' + keras_placeholders + '_cp.h5'
         return pathJoin(MODELS_DIR, path_subdir, CHECKPOINT_SUBDIR, filename_changed)
 
     @staticmethod
@@ -819,7 +820,7 @@ class Prophet(object):
         model.compile(loss=configs.network.loss.toKerasName(), optimizer=opt,
                       metrics=getRegressionMetrics())
 
-        callbacks = Prophet._genCallbacks(configs, path_subdir=path_subdir, do_verbose=do_verbose)
+        callbacks = Prophet._genCallbacks(configs, basename, path_subdir=path_subdir, do_verbose=do_verbose)
         prophet = Prophet(basename, model, callbacks, configs, do_verbose=do_verbose, path_subdir=path_subdir,
                           _create_key=Prophet.__create_key)
         info(f'Built {basename} prophet!', do_log)
@@ -834,7 +835,7 @@ class Prophet(object):
         basename = prophet_meta['basename']
         model = load_model(prophet_meta['paths']['model'], custom_objects=getAllCustomMetrics())
         configs = Hyperparameters.loadJson(prophet_meta['paths']['hyperparameters'])
-        callbacks = Prophet._genCallbacks(configs, path_subdir=path_subdir, do_verbose=do_verbose)
+        callbacks = Prophet._genCallbacks(configs, basename, path_subdir=path_subdir, do_verbose=do_verbose)
         prophet = Prophet(basename, model, callbacks, configs, do_verbose=do_verbose, path_subdir=path_subdir,
                           _create_key=Prophet.__create_key)
         prophet.scaler_path = prophet_meta['paths']['scaler']
@@ -846,7 +847,7 @@ class Prophet(object):
         return prophet
 
     @staticmethod
-    def _genCallbacks(configs: Hyperparameters, path_subdir: str = '', do_verbose: bool = True) -> list[
+    def _genCallbacks(configs: Hyperparameters, basename: str, path_subdir: str = '', do_verbose: bool = True) -> list[
         Callback]:
         callbacks = []
         if configs.network.patience_epochs_stop > 0:
@@ -859,8 +860,9 @@ class Prophet(object):
                                           patience=configs.network.patience_epochs_reduce,
                                           verbose=1 if do_verbose else 0)
             callbacks.append(reduce_lr)
-        checkpoint_filepath = Prophet._getCheckpointFilepath('', path_subdir)
-        createFolder(checkpoint_filepath)
+        checkpoint_filedir = Prophet._getCheckpointFilepath('', path_subdir)
+        createFolder(checkpoint_filedir)
+        checkpoint_filepath = Prophet._getCheckpointFilepath(basename, path_subdir)
         checkpoint = ModelCheckpoint(checkpoint_filepath, monitor='val_loss', verbose=1 if do_verbose else 0,
                                      save_best_only=True, mode='auto')
         callbacks.append(checkpoint)
@@ -870,4 +872,3 @@ class Prophet(object):
 
 
 tf.keras.backend.set_epsilon(EPSILON)
-Prophet.crateDirs()

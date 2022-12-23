@@ -700,15 +700,22 @@ leaky_relu_alpha: {self.network.leaky_relu_alpha},
         filepath = pathJoin(HYPERPARAMETERS_DIR, subdir, filename)
         return filepath
 
-    def saveJson(self, filepath: Optional[str] = None, subdir: str = '') -> str:
-        if filepath is None:
-            filepath = self.getConfigFilepath(subdir)
+    def copy(self) -> Hyperparameters:
+        return Hyperparameters.loadFromDict(self.toDict())
+
+    def toDict(self) -> dict:
         hyperparameters_dict = self.__dict__.copy()
         hyperparameters_dict['__type__'] = 'Hyperparameters'
         hyperparameters_dict['dataset'] = hyperparameters_dict['dataset'].__dict__
         hyperparameters_dict['enricher'] = hyperparameters_dict['enricher'].__dict__
         hyperparameters_dict['pca'] = hyperparameters_dict['pca'].__dict__
         hyperparameters_dict['network'] = hyperparameters_dict['network'].__dict__
+        return hyperparameters_dict
+
+    def saveJson(self, filepath: Optional[str] = None, subdir: str = '') -> str:
+        if filepath is None:
+            filepath = self.getConfigFilepath(subdir)
+            hyperparameters_dict = self.toDict()
         saveJson(hyperparameters_dict, filepath)
         return filepath
 
@@ -982,6 +989,8 @@ leaky_relu_alpha: {self.network.leaky_relu_alpha},
         hyperparameters_dict = {}
         array_dna = type(dna) is not dict
         array_features = set()
+        if not array_dna:
+            hyperparameters_dict['n_features'] = dna.get('n_features', None)
         for feature, index in search_space.genome_map.items():
             if (feature in search_space and search_space[feature].data_type == SearchSpace.Type.CONSTANT) or \
                     (feature[::-1].split('[', 1)[-1][::-1] in search_space and search_space[

@@ -31,8 +31,9 @@ from preprocessor import ProcessedDataset
 from prophet import Prophet
 from prophet_enums import Optimizer, ActivationFunc
 from search_space import SearchSpace
+from transformer import loadAmountOfFeaturesFromFile
 from utils_date import getNowStr
-from utils_fs import createFolder, pathJoin
+from utils_fs import createFolder, pathJoin, getBasename
 from utils_misc import getEnumRange, getCpuCount, mergeDicts, getRunId
 from utils_persistance import saveJson
 
@@ -73,7 +74,7 @@ def getSearchSpace(dataset_filename: Optional[str] = None, name: Optional[str] =
                    preprocess_on_nas: bool = False) -> SearchSpace:
     ss = SearchSpace()
     if dataset_filename is not None:
-        ss.add(name='dataset_filename', data_type=SSpaceType.CONSTANT, const=dataset_filename)
+        ss.add(name='dataset_filename', data_type=SSpaceType.CONSTANT, const=getBasename(dataset_filename))
     if name is not None:
         ss.add(name='name', data_type=SSpaceType.CONSTANT, const=name)
     ss.add(name='backward_samples', data_type=SSpaceType.INT, min_value=5, max_value=60)
@@ -111,11 +112,53 @@ def getSearchSpace(dataset_filename: Optional[str] = None, name: Optional[str] =
     return ss
 
 
+def getMidSearchSpace(dataset_filename: Optional[str] = None, name: Optional[str] = None,
+                      preprocess_on_nas: bool = False) -> SearchSpace:
+    ss = SearchSpace()
+    if dataset_filename is not None:
+        ss.add(name='dataset_filename', data_type=SSpaceType.CONSTANT, const=getBasename(dataset_filename))
+    if name is not None:
+        ss.add(name='name', data_type=SSpaceType.CONSTANT, const=name)
+    ss.add(name='backward_samples', data_type=SSpaceType.INT, min_value=5, max_value=60)
+    ss.add(name='forward_samples', data_type=SSpaceType.INT, min_value=7, max_value=7)  # TODO 7 - 14
+    ss.add(name='max_epochs', data_type=SSpaceType.INT, min_value=200, max_value=2000)
+    ss.add(name='stateful', data_type=SSpaceType.BOOLEAN)
+    ss.add(name='batch_size', data_type=SSpaceType.INT, min_value=0, max_value=128)
+    ss.add(name='dense_instead_lstm_on_out', data_type=SSpaceType.BOOLEAN)
+    ss.add(name='patience_epochs_stop', data_type=SSpaceType.INT, min_value=50, max_value=2000)
+    ss.add(name='patience_epochs_reduce', data_type=SSpaceType.INT, min_value=0, max_value=500)
+    ss.add(name='reduce_factor', data_type=SSpaceType.FLOAT, min_value=0, max_value=0.2)
+    ss.add(name='optimizer', data_type=SSpaceType.INT, **getEnumRange(Optimizer))
+    ss.add(name='shuffle', data_type=SSpaceType.BOOLEAN)
+    ss.add(name='n_hidden_lstm_layers', data_type=SSpaceType.INT, min_value=0, max_value=2)
+    ss.add(name='layer_sizes', data_type=SSpaceType.INT, min_value=5, max_value=33)
+    ss.add(name='activation_funcs', data_type=SSpaceType.CHOICE, choices=getActivationFuncsList())
+    ss.add(name='rec_activation_funcs', data_type=SSpaceType.CHOICE, choices=getRecurrentActivationFuncsList())
+    ss.add(name='dropout', data_type=SSpaceType.FLOAT, min_value=0, max_value=0.3)
+    ss.add(name='rec_dropout', data_type=SSpaceType.FLOAT, min_value=0, max_value=0.3)
+    ss.add(name='kernel_l1_regularizer', data_type=SSpaceType.FLOAT, min_value=0, max_value=0.3)
+    ss.add(name='bias_l1_regularizer', data_type=SSpaceType.FLOAT, min_value=0, max_value=0.3)
+    ss.add(name='recurrent_l1_regularizer', data_type=SSpaceType.FLOAT, min_value=0, max_value=0.3)
+    ss.add(name='activity_l1_regularizer', data_type=SSpaceType.FLOAT, min_value=0, max_value=0.3)
+    ss.add(name='kernel_l2_regularizer', data_type=SSpaceType.FLOAT, min_value=0, max_value=0.3)
+    ss.add(name='bias_l2_regularizer', data_type=SSpaceType.FLOAT, min_value=0, max_value=0.3)
+    ss.add(name='recurrent_l2_regularizer', data_type=SSpaceType.FLOAT, min_value=0, max_value=0.3)
+    ss.add(name='activity_l2_regularizer', data_type=SSpaceType.FLOAT, min_value=0, max_value=0.3)
+    ss.add(name='use_bias', data_type=SSpaceType.BOOLEAN)
+    ss.add(name='unit_forget_bias', data_type=SSpaceType.BOOLEAN)
+    ss.add(name='go_backwards', data_type=SSpaceType.BOOLEAN)
+    # only work if we load files during the nas callback
+    if preprocess_on_nas:
+        ss.add(name='normalize', data_type=SSpaceType.BOOLEAN)
+        ss.add(name='normalize_prediction_feat', data_type=SSpaceType.BOOLEAN)
+    return ss
+
+
 def getDummySearchSpace(dataset_filename: Optional[str] = None, name: Optional[str] = None,
                         preprocess_on_nas: bool = False) -> SearchSpace:
     ss = SearchSpace()
     if dataset_filename is not None:
-        ss.add(name='dataset_filename', data_type=SSpaceType.CONSTANT, const=dataset_filename)
+        ss.add(name='dataset_filename', data_type=SSpaceType.CONSTANT, const=getBasename(dataset_filename))
     if name is not None:
         ss.add(name='name', data_type=SSpaceType.CONSTANT, const=name)
     ss.add(name='backward_samples', data_type=SSpaceType.INT, min_value=5, max_value=14)
@@ -194,13 +237,21 @@ class GAAlgorithm(Enum):
 
 class NotificationCallback(Callback):
 
-    def __init__(self, verbose: bool) -> None:
+    def __init__(self, verbose: bool, c_gen: list, c_eval: list, max_eval: list) -> None:
         super().__init__()
         self.verbose = verbose
+        self.c_gen = c_gen
+        self.c_eval = c_eval
+        self.max_eval = max_eval
 
     def notify(self, algorithm):
         if self.verbose:
-            info(f'Finished generation {algorithm.n_gen}, best result so fa: {algorithm.pop.get("F").min()}!')
+            info(f'Finished generation {algorithm.n_gen}, best result so far: {algorithm.pop.get("F").min()}!')
+        try:
+            info(
+                f'THIS IS UNDER TESTING: c_gen: {self.c_gen[0]} ({algorithm.n_gen}), c_eval {self.c_eval[0]}, max_eval {self.max_eval[0]}')
+        except:
+            error('error on test - verb cb')
 
 
 class ProphetNAS(ProblemClass):
@@ -208,7 +259,7 @@ class ProphetNAS(ProblemClass):
     BEST_VALUE = -2147483647
     VERBOSE_CALLBACKS = False
 
-    ALGORITHM = GAAlgorithm.NSGA3.setObjs(5)
+    ALGORITHM = GAAlgorithm.NSGA2.setObjs(3)  # GAAlgorithm.NSGA3.setObjs(5)
 
     def __init__(self, search_space: SearchSpace, processed_data: ProcessedDataset, pop_size: int = 50,
                  children_per_gen: int = 50, eliminate_duplicates: bool = False,
@@ -263,7 +314,9 @@ class ProphetNAS(ProblemClass):
         self.processed_data = processed_data
         self.n_obj = n_obj
         self.parallelism = None
-        self.gen = None
+        self.c_gen = None
+        self.c_eval = None
+        self.max_eval = None
         self.history = None
         self.solution = None
         self.ref_dirs = ref_dirs
@@ -272,6 +325,7 @@ class ProphetNAS(ProblemClass):
         self.children_per_gen = children_per_gen
         self.eliminate_duplicates = eliminate_duplicates
         self.verbose = False
+        self.n_features = None
 
         self.algorithm = alg(*alg_args, **alg_kwargs)
         super().__init__(vars=variables, n_obj=self.n_obj, **kwargs)
@@ -283,37 +337,46 @@ class ProphetNAS(ProblemClass):
             x = x[0]
         if self.parallelism == 1 or type(x) is dict:
             for i, individual in enumerate(x):
-                metrics = ProphetNAS._trainCallback((i, individual), self.gen, self.search_space, self.processed_data,
-                                                    self.agg_method, train_mode=0)  # train_mode=0 -> train and test
+                # train_mode=0 -> train and test
+                metrics = ProphetNAS._trainCallback((i, individual), self.c_gen[0], self.search_space,
+                                                    self.processed_data,
+                                                    self.agg_method, train_mode=0, n_features=self.n_features)
                 for m, metric in enumerate(metrics):
                     if m < self.n_obj:
                         generation_metrics[m].append(metric)
         else:
-            a = [self.gen] * len(x)
+            a = [self.c_gen[0]] * len(x)
             b = [self.search_space] * len(x)
             c = [self.processed_data] * len(x)
             d = [self.agg_method] * len(x)
             e = [1] * len(x)  # train_mode=0 -> train
+            f = [self.n_features] * len(x)  # train_mode=0 -> train
             with pp.ThreadPool(self.parallelism, maxtasksperchild=None) as pool:
                 # cannot plot because matplot is not thread safe
-                # outputs = pool.map(ProphetNAS._trainCallback, enumerate(x), a, b, c, d, e)
-                success = pool.imap(ProphetNAS._trainCallback, enumerate(x), a, b, c, d, e)  # imap is non blocking
-                error = 0
+                # outputs = pool.map(ProphetNAS._trainCallback, enumerate(x), a, b, c, d, e, f)
+                success = pool.imap(ProphetNAS._trainCallback, enumerate(x), a, b, c, d, e, f)  # imap is non blocking
+                error_c = 0
                 for ind in success:
                     if not ind:
-                        error += 1
-                if error > 0:
-                    warn(f'Got {error} errors while evaluating...')
+                        error_c += 1
+                if error_c > 0:
+                    error(f'Got {error_c} errors while evaluating...')
 
             # testing and plotting
             for i, individual in enumerate(x):
-                metrics = ProphetNAS._trainCallback((i, individual), self.gen, self.search_space, self.processed_data,
-                                                    self.agg_method, train_mode=2)  # train_mode=2 -> test
+                # train_mode=2 -> test
+                metrics = ProphetNAS._trainCallback((i, individual), self.c_gen[0], self.search_space,
+                                                    self.processed_data,
+                                                    self.agg_method, train_mode=2, n_features=self.n_features)
                 for m, metric in enumerate(metrics):
                     if m < self.n_obj:
                         generation_metrics[m].append(metric)
 
-        self.gen += 1
+        self.c_gen[0] += 1
+        if type(x) is dict:
+            self.c_eval[0] += 1
+        else:
+            self.c_eval[0] += x.shape[0]
         if self.n_obj == 1:
             if type(x) is dict:
                 out["F"] = generation_metrics[0][0]
@@ -326,8 +389,10 @@ class ProphetNAS(ProblemClass):
                 out["F"] = np.column_stack(generation_metrics)
 
     def optimize(self, max_eval: int = 1000, parallelism: int = 1, verbose: bool = True,
-                 store_metrics: bool = True, do_plot: bool = True) -> list:
+                 store_metrics: bool = True, do_plot: bool = True, cache_n_features: bool = True) -> list:
         info(f'Starting Neural Architecture Search with {ProphetNAS.ALGORITHM}...')
+        if cache_n_features:
+            self.n_features = loadAmountOfFeaturesFromFile(self.search_space['dataset_filename'].const)
         if parallelism == 0:
             parallelism = getCpuCount()
         elif parallelism < 0:
@@ -336,14 +401,16 @@ class ProphetNAS(ProblemClass):
             info(f'Parallelism on NAS: {parallelism}')
             maybeSetFigureManager()
         self.parallelism = parallelism
-        self.gen = 0
+        self.c_gen = [0]  # array to used as reference
+        self.c_eval = [0]  # array to used as reference
+        self.max_eval = [max_eval]  # array to used as reference
         self.verbose = verbose
         res = minimize(
             self,
             self.algorithm,
             termination=('n_evals', max_eval),
             save_history=store_metrics,
-            callback=NotificationCallback(self.verbose),
+            callback=NotificationCallback(self.verbose, self.c_gen, self.c_eval, self.max_eval),
             verbose=self.verbose
         )
         # parse history
@@ -444,7 +511,9 @@ class ProphetNAS(ProblemClass):
             'algorithm': str(ProphetNAS.ALGORITHM),
             'n_obj': self.n_obj,
             'parallelism': self.parallelism,
-            'gen': self.gen,
+            'n_gen': self.c_gen[0],
+            'n_eval': self.c_eval[0],
+            'max_eval': self.max_eval[0],
             'agg_method': self.agg_method,
             'pop_size': self.pop_size,
             'children_per_gen': self.children_per_gen,
@@ -465,7 +534,8 @@ class ProphetNAS(ProblemClass):
 
     @staticmethod
     def _trainCallback(i_and_individual: tuple, gen: int, search_space: SearchSpace,
-                       processed_data: ProcessedDataset, agg_method: str, train_mode: int) -> Optional[tuple]:
+                       processed_data: ProcessedDataset, agg_method: str, train_mode: int,
+                       n_features: Optional[int] = None) -> Optional[tuple]:
         i, individual = i_and_individual
         mse = None
         f1 = None
@@ -473,8 +543,11 @@ class ProphetNAS(ProblemClass):
         cs = None
         acc = None
         raise_exceptions = False
+        got_exception = False
+        made_till_test = False
         try:
             ind_id = ProphetNAS.getIndId(i, gen=gen)
+            individual['n_features'] = n_features
             hyperparameters = Hyperparameters.parseDna(individual, search_space)
             if hyperparameters.name is not None:
                 hyperparameters.name += f'-gen={gen}-id={ind_id}'
@@ -510,6 +583,7 @@ class ProphetNAS(ProblemClass):
                 metrics = manual_metrics.get('validation', {})
             else:
                 metrics = manual_metrics.get('train', {})
+            made_till_test = True
             metrics = metrics.get(agg_method, {})
             regression = metrics.get('regression', {})
             binary = metrics.get('binary', {})
@@ -521,12 +595,20 @@ class ProphetNAS(ProblemClass):
             Prophet.destroy(prophet)
         except Exception as e:
             exception(e, raise_it=raise_exceptions)
-        mse = ProphetNAS.parseMetric(mse, True, 'MSE')
-        f1 = ProphetNAS.parseMetric(f1, False, 'F1 Score')
-        r2 = ProphetNAS.parseMetric(r2, False, 'R²')
-        cs = ProphetNAS.parseMetric(cs, False, 'Cosine Similarity')
-        acc = ProphetNAS.parseMetric(acc, False, 'Accuracy')
+            got_exception = True
+        except:
+            error('Unknown exception')
+            got_exception = True
 
+        if got_exception and not made_till_test:
+            error('Could not finish evaluating this subject, all metrics are empty due to an exception probably!')
+            mse = f1 = r2 = cs = acc = ProphetNAS.WORST_VALUE
+        else:
+            mse = ProphetNAS.parseMetric(mse, True, 'MSE')
+            f1 = ProphetNAS.parseMetric(f1, False, 'F1 Score')
+            r2 = ProphetNAS.parseMetric(r2, False, 'R²')
+            cs = ProphetNAS.parseMetric(cs, False, 'Cosine Similarity')
+            acc = ProphetNAS.parseMetric(acc, False, 'Accuracy')
         return mse, f1, r2, cs, acc
 
     @staticmethod

@@ -1,7 +1,7 @@
 import logger
 from data_pipeline import runPipeline
 from hyperparameters import Hyperparameters
-from nas import ProphetNAS, getDummySearchSpace, getSearchSpace
+from nas import ProphetNAS, getDummySearchSpace, getSearchSpace, getMidSearchSpace
 from postprocessor import AggregationMethod
 from prophet import Prophet
 
@@ -23,10 +23,10 @@ def run_nas():
     fibonacci_seq_size = 20
     use_kernel_pca = True
     agg_method = AggregationMethod.VOTING_EXP_F_WEIGHTED_AVERAGE
-    max_evaluations = 1000
-    population_size = 2000
-    offspring_size = 1800
-    parallelism = 6  # 1 means no parallelism, 0 means all cores
+    max_evaluations = 100
+    population_size = 30
+    offspring_size = 30
+    parallelism = 4  # 1 means no parallelism, 0 means all cores
     Prophet.PARALLELISM = 1
     eliminate_duplicates = True
     verbose = True
@@ -39,7 +39,7 @@ def run_nas():
     processed_data, dataset_filepath = runPipeline(ticker, start_date, end_date, dataset_configs, get_path=True,
                                                    encode=False)
 
-    search_space = getSearchSpace(dataset_filepath)
+    search_space = getMidSearchSpace(dataset_filepath)
     enriched_search_space = Hyperparameters.enrichSearchSpace(search_space)
     nas_opt = ProphetNAS(enriched_search_space, processed_data, population_size, offspring_size, eliminate_duplicates,
                          agg_method)

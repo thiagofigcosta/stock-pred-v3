@@ -193,4 +193,5 @@ def loadAmountOfFeaturesFromFile(filepath: str) -> Optional[int]:
         features.remove(DATE_COLUMN)
     if PREDICT_COLUMN in features:
         features.remove(PREDICT_COLUMN)
-    return len(features)
+    amount = len(features)
+    return amount if amount > 0 else None

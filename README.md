@@ -59,7 +59,6 @@ or
 sudo zypper install graphviz
 ```
 
-
 ### Install deps windows:
 
 Open anaconda console and type:
