@@ -127,7 +127,7 @@ class Hyperparameters(object):
             dataset_parameters.normalize = normalize
 
             if normalize_prediction_feat is None:
-                normalize_prediction_feat = True
+                normalize_prediction_feat = False
             dataset_parameters.normalize_prediction_feat = normalize_prediction_feat
 
             if norm_range is None:

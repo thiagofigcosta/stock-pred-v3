@@ -35,7 +35,6 @@ ARCHITECTURE_SUBDIR = 'architecture'
 HISTORY_SUBDIR = 'history'
 METRICS_SUBDIR = 'metrics'
 PROPHET_DIR = 'prophets'
-PARALLELISM = 1  # 1 means no parallelism
 
 
 class CustomCallback(Callback):
@@ -130,6 +129,8 @@ class Prophet(object):
 class Prophet(object):
     __create_key = object()
     _new_model_counter = 0
+
+    PARALLELISM = 1  # 1 means no parallelism, 0 means all cores
 
     def __init__(self, basename: str, model: Sequential(), callbacks: list[Callback],
                  configs: Hyperparameters, do_verbose: Optional[bool] = None, path_subdir: str = "",
@@ -262,11 +263,11 @@ class Prophet(object):
                     validation_data[0] = validation_data[0][:new_size_val]
                     validation_data[1] = validation_data[1][:new_size_val]
         info(f'Training prophet model `{self.basename}`...', do_log)
-        workers = PARALLELISM if PARALLELISM != 0 else getCpuCount()
+        workers = Prophet.PARALLELISM if Prophet.PARALLELISM != 0 else getCpuCount()
         history = self.model.fit(train_x, train_y, epochs=self.configs.network.max_epochs,
                                  validation_data=validation_data, batch_size=batch_size, callbacks=self.callbacks,
                                  shuffle=self.configs.network.shuffle, verbose=2 if self.verbose else 0,
-                                 workers=workers, use_multiprocessing=PARALLELISM != 1)
+                                 workers=workers, use_multiprocessing=Prophet.PARALLELISM != 1)
         self.restoreCheckpoint(do_log=do_log)
         info(f'Trained prophet model `{self.basename}`!', do_log)
         history = parseKerasHistory(history)

@@ -88,6 +88,8 @@ def reduceDimensionality(df: pd.DataFrame, optimum_n_components: KneeLocator, us
             if extract_manually_when_pca:
                 reduced = df[selected_columns]
     reduced_df = pd.DataFrame(reduced, index=df.index, columns=selected_columns)
+    reduced_df['close'] = df['Close']
+    verbose('Close price column added!')
     verbose(f'Reduced dimensionality with {"Kernel " if use_kernel_pca else ""}PCA!')
     return reduced_df
 
@@ -163,7 +165,7 @@ def transform(filepath: str, force: bool = False, configs: Optional[Hyperparamet
         plotDataframe(df_reduced, DATE_COLUMN, df_reduced.columns, title, 'reduced_feats', plot_prefix=plot_prefix,
                       x_dateformat=SAVE_DATE_FORMAT, legend_outside=True)
 
-    if configs.dataset.normalize_prediction_feat:
+    if configs.dataset.normalize_prediction_feat:  # TODO make this process later, before training
         predict_values, third_scaler = normalizeDataset(df[PREDICT_COLUMN], configs.dataset.norm_range, log=False)
         df_reduced[PREDICT_COLUMN] = predict_values
         if do_plots:

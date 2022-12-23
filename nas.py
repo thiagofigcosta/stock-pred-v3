@@ -8,6 +8,7 @@ from pymoo.algorithms.moo.nsga2 import NSGA2
 from pymoo.algorithms.moo.nsga2 import RankAndCrowdingSurvival
 from pymoo.algorithms.moo.nsga3 import NSGA3
 from pymoo.algorithms.soo.nonconvex.ga import GA
+from pymoo.core.callback import Callback
 from pymoo.core.mixed import MixedVariableSampling, MixedVariableMating, MixedVariableDuplicateElimination
 from pymoo.core.problem import ElementwiseProblem, Problem
 from pymoo.core.result import Result
@@ -22,8 +23,8 @@ from pymoo.visualization.radviz import Radviz
 from pymoo.visualization.scatter import Scatter
 from pymoo.visualization.star_coordinate import StarCoordinate
 
-from hyperparameters import Hyperparameters
-from logger import info, warn, exception
+from hyperparameters import Hyperparameters, HYPERPARAMETERS_DIR
+from logger import info, warn, exception, error
 from plotter import maybeSetFigureManager, showOrSavePymooPlot, getCMap
 from postprocessor import AggregationMethod
 from preprocessor import ProcessedDataset
@@ -160,7 +161,7 @@ class GAAlgorithm(Enum):
             raise_it = True
         if n_objs > 3 and self == GAAlgorithm.NSGA2:
             raise_it = True
-        if n_objs > 4 and self == GAAlgorithm.NSGA3:
+        if n_objs > 10 and self == GAAlgorithm.NSGA3:
             raise_it = True
         if raise_it:
             raise ValueError(f'{self} cannot handle {n_objs} objectives')
@@ -191,12 +192,23 @@ class GAAlgorithm(Enum):
         return list(map(lambda c: c, GAAlgorithm))
 
 
+class NotificationCallback(Callback):
+
+    def __init__(self, verbose: bool) -> None:
+        super().__init__()
+        self.verbose = verbose
+
+    def notify(self, algorithm):
+        if self.verbose:
+            info(f'Finished generation {algorithm.n_gen}, best result so fa: {algorithm.pop.get("F").min()}!')
+
+
 class ProphetNAS(ProblemClass):
     WORST_VALUE = 2147483647
     BEST_VALUE = -2147483647
     VERBOSE_CALLBACKS = False
 
-    ALGORITHM = GAAlgorithm.NSGA2.setObjs(2)  # GAAlgorithm.NSGA3.setObjs(4)
+    ALGORITHM = GAAlgorithm.NSGA3.setObjs(5)
 
     def __init__(self, search_space: SearchSpace, processed_data: ProcessedDataset, pop_size: int = 50,
                  children_per_gen: int = 50, eliminate_duplicates: bool = False,
@@ -219,7 +231,7 @@ class ProphetNAS(ProblemClass):
             elif dimension.data_type == SearchSpace.Type.CONSTANT:
                 pass
             else:
-                ValueError(f'Unknown SearchSpace.Type')
+                raise ValueError(f'Unknown SearchSpace.Type')
 
         alg_kwargs = dict(
             pop_size=pop_size,
@@ -331,6 +343,7 @@ class ProphetNAS(ProblemClass):
             self.algorithm,
             termination=('n_evals', max_eval),
             save_history=store_metrics,
+            callback=NotificationCallback(self.verbose),
             verbose=self.verbose
         )
         # parse history
@@ -468,9 +481,18 @@ class ProphetNAS(ProblemClass):
                 hyperparameters.refreshUuids()
 
             if train_mode <= 1:  # train and test or just train
-                prophet = Prophet.build(hyperparameters, basename=hyperparameters.name,
-                                        do_log=ProphetNAS.VERBOSE_CALLBACKS, do_verbose=ProphetNAS.VERBOSE_CALLBACKS,
-                                        ignore_save_error=True, path_subdir=f'{getRunId()}')
+                try:
+                    prophet = Prophet.build(hyperparameters, basename=hyperparameters.name,
+                                            do_log=ProphetNAS.VERBOSE_CALLBACKS,
+                                            do_verbose=ProphetNAS.VERBOSE_CALLBACKS,
+                                            ignore_save_error=True, path_subdir=f'{getRunId()}')
+                except ValueError:
+                    s_dir = 'ERROR'
+                    createFolder(pathJoin(HYPERPARAMETERS_DIR, s_dir))
+                    filep = hyperparameters.saveJson(subdir=s_dir)
+                    error(f'Error building LSTM network, hyperparameters saved at {filep}')
+                    raise Exception()
+
                 prophet.train(processed_data.encode(hyperparameters, copy=True), do_log=ProphetNAS.VERBOSE_CALLBACKS)
                 if train_mode == 1:  # just train
                     prophet.save(ignore_error=True, do_log=ProphetNAS.VERBOSE_CALLBACKS)

@@ -1,26 +1,33 @@
 import logger
 from data_pipeline import runPipeline
 from hyperparameters import Hyperparameters
-from nas import ProphetNAS, getDummySearchSpace
+from nas import ProphetNAS, getDummySearchSpace, getSearchSpace
 from postprocessor import AggregationMethod
+from prophet import Prophet
 
 
 def run_nas():
+    from pymoo.config import Config
+    Config.warnings['not_compiled'] = False
+    import tensorflow as tf
+    import logging
+    tf.get_logger().setLevel('ERROR')
+    tf.autograph.set_verbosity(3)
+    tf.get_logger().setLevel(logging.ERROR)
+
     ticker = 'goog'
-    start_date = '01/01/2002'
+    start_date = '01/01/2018'  # 2002
     end_date = '30/11/2022'
-    train_ratio = .5
-    validation_ratio = .2
+    train_ratio = .7  # .5
+    validation_ratio = .3
     fibonacci_seq_size = 20
     use_kernel_pca = True
     agg_method = AggregationMethod.VOTING_EXP_F_WEIGHTED_AVERAGE
-    # max_evaluations = 1000
-    # population_size = 30
-    # offspring_size = 30
-    max_evaluations = 3
-    population_size = 6
-    offspring_size = 6
-    parallelism = 1
+    max_evaluations = 1000
+    population_size = 2000
+    offspring_size = 1800
+    parallelism = 6  # 1 means no parallelism, 0 means all cores
+    Prophet.PARALLELISM = 1
     eliminate_duplicates = True
     verbose = True
 
@@ -32,7 +39,7 @@ def run_nas():
     processed_data, dataset_filepath = runPipeline(ticker, start_date, end_date, dataset_configs, get_path=True,
                                                    encode=False)
 
-    search_space = getDummySearchSpace(dataset_filepath)
+    search_space = getSearchSpace(dataset_filepath)
     enriched_search_space = Hyperparameters.enrichSearchSpace(search_space)
     nas_opt = ProphetNAS(enriched_search_space, processed_data, population_size, offspring_size, eliminate_duplicates,
                          agg_method)
