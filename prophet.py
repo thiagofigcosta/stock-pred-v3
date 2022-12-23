@@ -735,7 +735,7 @@ class Prophet(object):
                                unit_forget_bias=configs.network.unit_forget_bias[l],
                                recurrent_dropout=configs.network.rec_dropout[l],
                                go_backwards=configs.network.go_backwards[l], time_major=time_major,
-                               name=f'lstm_{"h" if l > 0 else "i"}_{l}',
+                               name=f'lstm_{f"h_{l}" if l > 0 else "i"}',
                                kernel_regularizer=L1L2(l1=configs.network.kernel_l1_regularizer[l],
                                                        l2=configs.network.kernel_l2_regularizer[l]),
                                recurrent_regularizer=L1L2(l1=configs.network.recurrent_l1_regularizer[l],
@@ -873,3 +873,4 @@ class Prophet(object):
 
 
 tf.keras.backend.set_epsilon(EPSILON)
+Prophet.crateDirs('')

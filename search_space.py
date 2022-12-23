@@ -296,45 +296,79 @@ SSpaceType = SearchSpace.Type
 
 
 def getActivationFuncsList(ss_id: int) -> list[ActivationFunc]:
-    if ss_id < 3:
-        activations = [
+    all_you_can_have = [
+        ActivationFunc.LEAKY_RELU,
+        ActivationFunc.SIGMOID,
+        ActivationFunc.TANH,
+        ActivationFunc.EXPONENTIAL,
+        ActivationFunc.HARD_SIGMOID,
+        ActivationFunc.SELU,
+        ActivationFunc.ELU,
+    ]
+    if ss_id == getSearchSpaceIdByName('searchspace'):
+        out = all_you_can_have
+    elif ss_id == getSearchSpaceIdByName('dummy'):
+        out = all_you_can_have
+    elif ss_id == getSearchSpaceIdByName('mid'):
+        out = all_you_can_have
+    elif ss_id == getSearchSpaceIdByName('fast'):
+        out = [
             ActivationFunc.LEAKY_RELU,
             ActivationFunc.SIGMOID,
             ActivationFunc.TANH,
-            ActivationFunc.EXPONENTIAL,
             ActivationFunc.HARD_SIGMOID,
-            ActivationFunc.SELU,
-            ActivationFunc.ELU,
         ]
-        return activations
     else:
         raise ValueError(f'Invalid SS id {ss_id}')
+    for el in out:
+        if el not in all_you_can_have:
+            raise ValueError(f'Invalid recurrent activation id {el}')
+    return out
 
 
 def getRecurrentActivationFuncsList(ss_id: int) -> list[ActivationFunc]:
-    if ss_id < 3:
-        activations = [
+    all_you_can_have = [
+        ActivationFunc.RELU,
+        ActivationFunc.SIGMOID,
+        ActivationFunc.TANH,
+        ActivationFunc.HARD_SIGMOID,
+        ActivationFunc.SELU,
+        ActivationFunc.ELU,
+    ]
+    if ss_id == getSearchSpaceIdByName('searchspace'):
+        out = all_you_can_have
+    elif ss_id == getSearchSpaceIdByName('dummy'):
+        out = all_you_can_have
+    elif ss_id == getSearchSpaceIdByName('mid'):
+        out = all_you_can_have
+    elif ss_id == getSearchSpaceIdByName('fast'):
+        out = [
             ActivationFunc.RELU,
             ActivationFunc.SIGMOID,
             ActivationFunc.TANH,
             ActivationFunc.HARD_SIGMOID,
-            ActivationFunc.SELU,
-            ActivationFunc.ELU,
         ]
-        return activations
     else:
         raise ValueError(f'Invalid SS id {ss_id}')
+    for el in out:
+        if el not in all_you_can_have:
+            raise ValueError(f'Invalid recurrent activation id {el}')
+    return out
 
 
 _SEARCH_SPACES_MAP = {
     'SearchSpace': 0,
     'SearchSpace-0': 0,
+    #
     'Dummy': 1,
     'DummySearchSpace': 1,
     'SearchSpace-1': 1,
+    #
     'Mid': 2,
     'MidSearchSpace': 2,
-    'SearchSpace-3': 1,
+    'SearchSpace-2': 2,
+    #
+    'FastOne': 3,
 }
 _SEARCH_SPACES_MAP = {k.lower(): v for k, v in _SEARCH_SPACES_MAP.items()}
 
@@ -360,9 +394,9 @@ def getSearchSpace(dataset_filename: Optional[str] = None, name: Optional[str] =
     ss.add(name='n_hidden_lstm_layers', data_type=SSpaceType.INT, min_value=0, max_value=3)
     ss.add(name='layer_sizes', data_type=SSpaceType.INT, min_value=10, max_value=80)
     ss.add(name='activation_funcs', data_type=SSpaceType.CHOICE,
-           choices=getActivationFuncsList(_SEARCH_SPACES_MAP['SearchSpace']))
+           choices=getActivationFuncsList(getSearchSpaceIdByName('searchspace')))
     ss.add(name='rec_activation_funcs', data_type=SSpaceType.CHOICE,
-           choices=getRecurrentActivationFuncsList(_SEARCH_SPACES_MAP['SearchSpace']))
+           choices=getRecurrentActivationFuncsList(getSearchSpaceIdByName('searchspace')))
     ss.add(name='dropout', data_type=SSpaceType.FLOAT, min_value=0, max_value=0.3)
     ss.add(name='rec_dropout', data_type=SSpaceType.FLOAT, min_value=0, max_value=0.3)
     ss.add(name='kernel_l1_regularizer', data_type=SSpaceType.FLOAT, min_value=0, max_value=0.3)
@@ -404,9 +438,9 @@ def getMidSearchSpace(dataset_filename: Optional[str] = None, name: Optional[str
     ss.add(name='n_hidden_lstm_layers', data_type=SSpaceType.INT, min_value=0, max_value=2)
     ss.add(name='layer_sizes', data_type=SSpaceType.INT, min_value=5, max_value=33)
     ss.add(name='activation_funcs', data_type=SSpaceType.CHOICE,
-           choices=getActivationFuncsList(_SEARCH_SPACES_MAP['Mid']))
+           choices=getActivationFuncsList(getSearchSpaceIdByName('mid')))
     ss.add(name='rec_activation_funcs', data_type=SSpaceType.CHOICE,
-           choices=getRecurrentActivationFuncsList(_SEARCH_SPACES_MAP['Mid']))
+           choices=getRecurrentActivationFuncsList(getSearchSpaceIdByName('mid')))
     ss.add(name='dropout', data_type=SSpaceType.FLOAT, min_value=0, max_value=0.3)
     ss.add(name='rec_dropout', data_type=SSpaceType.FLOAT, min_value=0, max_value=0.3)
     ss.add(name='kernel_l1_regularizer', data_type=SSpaceType.FLOAT, min_value=0, max_value=0.3)
@@ -448,9 +482,9 @@ def getDummySearchSpace(dataset_filename: Optional[str] = None, name: Optional[s
     ss.add(name='n_hidden_lstm_layers', data_type=SSpaceType.INT, min_value=0, max_value=1)
     ss.add(name='layer_sizes', data_type=SSpaceType.INT, min_value=5, max_value=10)
     ss.add(name='activation_funcs', data_type=SSpaceType.CHOICE,
-           choices=getActivationFuncsList(_SEARCH_SPACES_MAP['Dummy']))
+           choices=getActivationFuncsList(getSearchSpaceIdByName('dummy')))
     ss.add(name='rec_activation_funcs', data_type=SSpaceType.CHOICE,
-           choices=getRecurrentActivationFuncsList(_SEARCH_SPACES_MAP['Dummy']))
+           choices=getRecurrentActivationFuncsList(getSearchSpaceIdByName('dummy')))
     ss.add(name='dropout', data_type=SSpaceType.CONSTANT, const=0)
     ss.add(name='rec_dropout', data_type=SSpaceType.CONSTANT, const=0)
     ss.add(name='use_bias', data_type=SSpaceType.BOOLEAN)
@@ -463,18 +497,68 @@ def getDummySearchSpace(dataset_filename: Optional[str] = None, name: Optional[s
     return ss
 
 
+def getFastSearchSpace(dataset_filename: Optional[str] = None, name: Optional[str] = None,
+                       preprocess_on_nas: bool = False) -> SearchSpace:
+    ss = SearchSpace()
+    if dataset_filename is not None:
+        ss.add(name='dataset_filename', data_type=SSpaceType.CONSTANT, const=getBasename(dataset_filename))
+    if name is not None:
+        ss.add(name='name', data_type=SSpaceType.CONSTANT, const=name)
+    ss.add(name='backward_samples', data_type=SSpaceType.INT, min_value=5, max_value=60)
+    ss.add(name='forward_samples', data_type=SSpaceType.INT, min_value=7, max_value=7)
+    ss.add(name='max_epochs', data_type=SSpaceType.INT, min_value=100, max_value=1200)
+    ss.add(name='stateful', data_type=SSpaceType.BOOLEAN)
+    ss.add(name='batch_size', data_type=SSpaceType.INT, min_value=0, max_value=128)
+    ss.add(name='dense_instead_lstm_on_out', data_type=SSpaceType.BOOLEAN)
+    ss.add(name='patience_epochs_stop', data_type=SSpaceType.INT, min_value=50, max_value=180)
+    ss.add(name='patience_epochs_reduce', data_type=SSpaceType.INT, min_value=0, max_value=90)
+    ss.add(name='reduce_factor', data_type=SSpaceType.FLOAT, min_value=0, max_value=0.2)
+    ss.add(name='optimizer', data_type=SSpaceType.INT, **getEnumRange(Optimizer))
+    ss.add(name='shuffle', data_type=SSpaceType.BOOLEAN)
+    ss.add(name='n_hidden_lstm_layers', data_type=SSpaceType.INT, min_value=1, max_value=2)
+    ss.add(name='layer_sizes', data_type=SSpaceType.INT, min_value=10, max_value=200)
+    ss.add(name='activation_funcs', data_type=SSpaceType.CHOICE,
+           choices=getActivationFuncsList(getSearchSpaceIdByName('searchspace')))
+    ss.add(name='rec_activation_funcs', data_type=SSpaceType.CHOICE,
+           choices=getRecurrentActivationFuncsList(getSearchSpaceIdByName('searchspace')))
+    ss.add(name='dropout', data_type=SSpaceType.FLOAT, min_value=0, max_value=0.3)
+    ss.add(name='rec_dropout', data_type=SSpaceType.FLOAT, min_value=0, max_value=0.3)
+    ss.add(name='kernel_l1_regularizer', data_type=SSpaceType.FLOAT, min_value=0, max_value=0.1)
+    ss.add(name='bias_l1_regularizer', data_type=SSpaceType.FLOAT, min_value=0, max_value=0.1)
+    ss.add(name='recurrent_l1_regularizer', data_type=SSpaceType.FLOAT, min_value=0, max_value=0.1)
+    ss.add(name='activity_l1_regularizer', data_type=SSpaceType.FLOAT, min_value=0, max_value=0.1)
+    ss.add(name='kernel_l2_regularizer', data_type=SSpaceType.FLOAT, min_value=0, max_value=0.1)
+    ss.add(name='bias_l2_regularizer', data_type=SSpaceType.FLOAT, min_value=0, max_value=0.1)
+    ss.add(name='recurrent_l2_regularizer', data_type=SSpaceType.FLOAT, min_value=0, max_value=0.1)
+    ss.add(name='activity_l2_regularizer', data_type=SSpaceType.FLOAT, min_value=0, max_value=0.1)
+    ss.add(name='use_bias', data_type=SSpaceType.BOOLEAN)
+    ss.add(name='unit_forget_bias', data_type=SSpaceType.BOOLEAN)
+    ss.add(name='go_backwards', data_type=SSpaceType.BOOLEAN)
+    # only work if we load files during the nas callback
+    if preprocess_on_nas:
+        ss.add(name='normalize', data_type=SSpaceType.BOOLEAN)
+        ss.add(name='normalize_prediction_feat', data_type=SSpaceType.BOOLEAN)
+    return ss
+
+
+def getSearchSpaceIdByName(ss_id: str) -> int:
+    return _SEARCH_SPACES_MAP[ss_id.lower()]
+
+
 def getSearchSpaceById(ss_id: Union[str, int], dataset_filename: Optional[str] = None, name: Optional[str] = None,
                        preprocess_on_nas: bool = False) -> SearchSpace:
     if type(ss_id) is str:
-        ss_id = _SEARCH_SPACES_MAP[ss_id.lower()]
+        ss_id = getSearchSpaceIdByName(ss_id)
 
     if ss_id < 0 or ss_id > len(_SEARCH_SPACES_MAP):
         raise ValueError(f'Invalid SS id {ss_id}')
     if ss_id == 0:
-        return getDummySearchSpace(dataset_filename=dataset_filename, name=name, preprocess_on_nas=preprocess_on_nas)
+        return getSearchSpace(dataset_filename=dataset_filename, name=name, preprocess_on_nas=preprocess_on_nas)
     elif ss_id == 1:
         return getMidSearchSpace(dataset_filename=dataset_filename, name=name, preprocess_on_nas=preprocess_on_nas)
     elif ss_id == 2:
         return getDummySearchSpace(dataset_filename=dataset_filename, name=name, preprocess_on_nas=preprocess_on_nas)
+    elif ss_id == 3:
+        return getFastSearchSpace(dataset_filename=dataset_filename, name=name, preprocess_on_nas=preprocess_on_nas)
     else:
         raise ValueError(f'Not handled SS id {ss_id}')

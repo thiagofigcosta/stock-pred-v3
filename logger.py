@@ -15,9 +15,10 @@ APP_NAME = 'application'
 DATETIME_FORMAT = '%d/%m/%Y-%H:%M:%S'
 DATE_FORMAT = '%Y%m%d'
 _PRINT = True
-_VERBOSE = False
+_VERBOSE = False  # TODO make a enum with log levels to filter and a var to chose if log to file the fieltered out, o anotehr, or ignore, fallback behaviour
 _EYE_CATCHER = False
 _FULL_HOSTNAME = False
+_THE_HOSTNAME = None
 
 createFolder(LOG_FOLDER)
 
@@ -48,13 +49,16 @@ def configure(log_folder: Optional[str] = None, verbose: Optional[bool] = None,
 def _log(message: Any, error: bool = False, traceback: bool = False, warn: bool = False, fatal: bool = False,
          verb: bool = False,
          clean: bool = False) -> None:
+    global _THE_HOSTNAME
     if type(message) is not str:
         message = str(message)
 
     if not clean:
         now = datetime.now()
         nowstr = f'{now.strftime(DATETIME_FORMAT)}.{now.microsecond:06d}'
-        hostname = socket.gethostname()
+        if _THE_HOSTNAME is None:
+            _THE_HOSTNAME = socket.gethostname()
+        hostname = _THE_HOSTNAME
         if not _FULL_HOSTNAME:
             hostname = hostname.split('.')[0]
         info_header = f"[{hostname}|{nowstr}] "

@@ -4,6 +4,7 @@ from typing import Union, Optional
 
 import math
 import numpy as np
+from sklearn.utils import shuffle
 
 from hyperparameters import Hyperparameters
 from logger import info, verbose
@@ -262,6 +263,8 @@ class ProcessedDataset(object):
 
         to_enc = self.copy() if copy else self
         if to_enc.hasTrain():
+            if configs.network.shuffle:
+                to_enc.features_train, to_enc.labels_train = shuffle(to_enc.features_train, to_enc.labels_train)
             to_enc.features_train, to_enc.labels_train = encodeRollingWindows(to_enc.features_train,
                                                                               to_enc.labels_train,
                                                                               backward_samples,
