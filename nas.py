@@ -285,7 +285,7 @@ class ProphetNAS(ProblemClass):
         if parallelism == 0:
             parallelism = getCpuCount()
         elif parallelism < 0:
-            parallelism = 1
+            parallelism = max(getCpuCount() + parallelism, 1)
         if parallelism != 1:
             info(f'Parallelism on NAS: {parallelism}')
             maybeSetFigureManager()
@@ -485,7 +485,7 @@ class ProphetNAS(ProblemClass):
             acc = binary.get('acc', None)
             Prophet.destroy(prophet)
         except Exception as e:
-            exception(e, raise_it=raise_exceptions)
+            exception(e, raise_exceptions)
             got_exception = True
         except:
             error('Unknown exception')

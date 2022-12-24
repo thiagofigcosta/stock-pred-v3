@@ -72,29 +72,27 @@ pip install --user tensorflow
 
 Install [graphviz](https://graphviz.gitlab.io/download/).
 
-## Running with Docker (TODO)
+## Running with Docker
 
 ### To build image
 
-You may want to edit the `entrypoint.sh` to add the commands for your expriment.
-
 ```
-docker build -t stock-pred:2.0.0 .
+docker build -t stock-pred:3.0.0 .
 ```
 
-### To run image deatached
+### To run image de-attached
 
 ```
-docker run -d stock-pred:2.0.0
+docker run -d stock-pred:3.0.0
 ```
 
 or
 
 ```
-docker run -e RUN_DEFAULT_EXP='True' -d stock-pred:2.0.0
+docker run -e MODE='lstm' -d stock-pred:2.0.0
 ```
 
-## Running with Docker-Compose TODO
+## Running with Docker-Compose
 
 ### To build
 
@@ -131,8 +129,8 @@ docker stop $(docker container ls | grep stock-pred | cut -f 1 -d' ' | head -n 1
 ### To copy experiment results compressed
 
 ```
-docker exec -it $(docker container ls | grep stock-pred | cut -f 1 -d' ' | head -n 1) bash -c "tar -zcvf /code/exp.tar.gz /code/saved_plots/"
-docker cp $(docker container ls | grep stock-pred | cut -f 1 -d' ' | head -n 1):/code/exp.tar.gz .
+docker exec -it $(docker container ls | grep stock-pred | cut -f 1 -d' ' | head -n 1) bash -c "tar -zcvf /code/experiments/exp.tar.gz /code/experiments/saved_plots/"
+docker cp $(docker container ls | grep stock-pred | cut -f 1 -d' ' | head -n 1):/code/experiments/exp.tar.gz .
 ```
 
 ### To uncompress experiments

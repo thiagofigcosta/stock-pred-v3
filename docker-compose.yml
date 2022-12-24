@@ -8,18 +8,19 @@ services:
     restart: always
     environment:
       COMPRESS_AFTER: "True"
-      NAS_PARALLELISM: "0"
+      NAS_PARALLELISM: "-2"
       LSTM_PARALLELISM: "1"
       STOCK_LIST: "goog,pg,jnj,mmm,ko"
       START_DATE: "01/01/2002"
       END_DATE: "30/11/2022"
       MODE: "NAS"
       SS_ID: "SearchSpace"
-      POP_SZ: "2000"
-      CHILDREN_SZ: "2000"
-      MAX_EVAL: "6000"
+      POP_SZ: "126"
+#      CHILDREN_SZ: "2000"
+      MAX_EVAL: "1260"
       NAS_ALG: "NSGAIII"
       NAS_OBJ: "5"
+      NAS_REF_DIRS_CONF: "(-1, 1)"
       AGG_METHOD: "VOTING_EXP_F_WEIGHTED_AVERAGE"
     volumes:
       - ./datasets:/code/datasets

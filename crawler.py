@@ -39,7 +39,7 @@ def downloadTicker(ticker: str, start_date: Optional[str] = None, end_date: Opti
             content = response.read().decode('utf-8')
             info(f'Downloaded ticker `{ticker}` data successfully!')
         else:
-            exception(Exception(f'Failed to download, server returned response code {response.code}'), raise_it=True)
+            exception(Exception(f'Failed to download, server returned response code {response.code}'), True)
     if content is not None:
         content = filterOutNullLines(content)
         with codecs.open(filepath, 'w', 'utf-8') as file:

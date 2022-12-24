@@ -23,6 +23,24 @@ class Level(Enum):
     def __str__(self) -> str:
         return self.name
 
+    def __gt__(self, other) -> bool:
+        return self.value > other.value
+
+    def __lt__(self, other) -> bool:
+        return self.value < other.value
+
+    def __ge__(self, other) -> bool:
+        return self.value >= other.value
+
+    def __le__(self, other) -> bool:
+        return self.value <= other.value
+
+    def __eq__(self, other) -> bool:
+        return self.value == other.value
+
+    def __ne__(self, other) -> bool:
+        return self.value != other.value
+
 
 class LevelFallback(Enum):
     NO_FALLBACK = auto()  # the filtered out message is ignored
@@ -207,7 +225,10 @@ def getLogFilename(filtered_out: bool = False) -> Optional[str]:
     return path.join(LOG_FOLDER, filename)
 
 
-def logDict(dictionary: dict, name: Optional[str] = None, tabs: int = 0, inline: bool = False):
+def logDict(dictionary: dict, name: Optional[str] = None, tabs: int = 0, inline: bool = False,
+            do_log: bool = True) -> str:
+    if not do_log:
+        return ''
     start = ''
     to_print_all = ''
     inline_str = "" if inline else "\n"
@@ -216,7 +237,7 @@ def logDict(dictionary: dict, name: Optional[str] = None, tabs: int = 0, inline:
         to_print = f'{tabs_str}{name}:{inline_str}'
         if inline:
             to_print_all += to_print
-        else:
+        elif do_log:
             info(to_print)
         start = ' | ' if inline else '\t'
 
@@ -226,14 +247,16 @@ def logDict(dictionary: dict, name: Optional[str] = None, tabs: int = 0, inline:
         to_print = f'{tabs_str}{first_str}{key}: {value}{inline_str}'
         if inline:
             to_print_all += to_print
-        else:
-            info(to_print)
+        elif do_log:
+            clean(to_print)
         first = False
+    return to_print_all
 
 
-def multiline(messages: str):
-    for message in messages.split('\n'):
-        _log(message, is_error=False, has_traceback=False, is_warn=False, is_verbose=False)
+def multiline(messages: str, do_log: bool = True):
+    if do_log:
+        for message in messages.split('\n'):
+            _log(message, is_error=False, has_traceback=False, is_warn=False, is_verbose=False)
 
 
 def info(message: Any = '', do_log: bool = True):
@@ -241,31 +264,32 @@ def info(message: Any = '', do_log: bool = True):
         _log(message, is_error=False, has_traceback=False, is_warn=False, is_verbose=False)
 
 
-def fatal(message: Any):
-    error(message, fatal=True)
+def fatal(message_or_exception: Any):
+    if isinstance(message_or_exception, Exception):
+        message_or_exception = _handleException(message_or_exception)
+    error(message_or_exception, is_fatal=True)
 
 
-def error(message: Any, fatal: bool = False):
-    _log(message, is_error=True, has_traceback=False, is_warn=False, is_verbose=False, is_fatal=fatal)
-    if fatal:
+def error(message: Any, is_fatal=False):
+    _log(message, is_error=True, has_traceback=False, is_warn=False, is_verbose=False, is_fatal=is_fatal)
+    if is_fatal:
         exit(1)
 
 
-def exception(e: Exception, raise_it: bool = False, fatal: bool = False):
-    _log(_handleException(e), is_error=False, has_traceback=True, is_warn=False, is_verbose=False, is_fatal=fatal)
-    if fatal:
-        exit(1)
-    elif raise_it:
+def exception(e: Exception, raise_it: bool):
+    _log(_handleException(e), is_error=False, has_traceback=True, is_warn=False, is_verbose=False, is_fatal=False)
+    if raise_it:
         raise e
 
 
-def warn(message: Any):
-    _log(message, is_error=False, has_traceback=False, is_warn=True, is_verbose=False)
-
-
-def clean(message: Any, error: bool = False, warn: bool = False, verb: bool = False, do_log: bool = True):
+def warn(message: Any, do_log: bool = True):
     if do_log:
-        _log(message, is_clean=True, is_error=error, is_warn=warn, is_verbose=verb)
+        _log(message, is_error=False, has_traceback=False, is_warn=True, is_verbose=False)
+
+
+def clean(message: Any, is_error: bool = False, is_warn: bool = False, is_verbose: bool = False, do_log: bool = True):
+    if do_log:
+        _log(message, is_clean=True, is_error=is_error, is_warn=is_warn, is_verbose=is_verbose)
 
 
 def verbose(message: Any, do_log: bool = True):

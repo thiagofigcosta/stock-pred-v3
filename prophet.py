@@ -221,7 +221,12 @@ class Prophet(object):
                     validation_data[0] = validation_data[0][:new_size_val]
                     validation_data[1] = validation_data[1][:new_size_val]
         info(f'Training prophet model `{self.basename}`...', do_log)
-        workers = Prophet.PARALLELISM if Prophet.PARALLELISM != 0 else getCpuCount()
+        if Prophet.PARALLELISM == 0:
+            workers = getCpuCount()
+        elif Prophet.PARALLELISM <= 0:
+            workers = max(getCpuCount() + Prophet.PARALLELISM, 1)
+        else:
+            workers = Prophet.PARALLELISM
         history = self.model.fit(train_x, train_y, epochs=self.configs.network.max_epochs,
                                  validation_data=validation_data, batch_size=batch_size, callbacks=self.callbacks,
                                  shuffle=self.configs.network.shuffle, verbose=2 if self.verbose else 0,
@@ -783,7 +788,7 @@ class Prophet(object):
             model_summary_lines = []
             model.summary(print_fn=lambda x: model_summary_lines.append(x))
             model_summary_str = '\n'.join(model_summary_lines) + '\n'
-            clean(model_summary_str, verb=True, do_log=do_log)
+            clean(model_summary_str, is_verbose=True, do_log=do_log)
 
         clip_dict = {}
         if configs.network.clip_norm_instead_of_value:

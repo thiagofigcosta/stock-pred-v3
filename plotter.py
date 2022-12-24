@@ -9,7 +9,7 @@ from matplotlib import pyplot as plt, pylab
 from matplotlib.backend_bases import FigureManagerBase
 from pymoo.core.plot import Plot
 
-from logger import exception
+from logger import exception, fatal
 from utils_date import getNowStr
 from utils_fs import createFolder, pathJoin
 from utils_misc import getRunId
@@ -236,7 +236,7 @@ def plot(plots: Union[tuple[str, list, dict], list[tuple[str, list, dict]]], mod
         elif plot_type == 'text':
             _text(plot_data, plot_args)
         else:
-            exception(Exception(f'Invalid plot_type: `{plot_type}`'), fatal=True)
+            fatal(Exception(f'Invalid plot_type: `{plot_type}`'))
 
     if title is not None:
         fig = pylab.gcf()
