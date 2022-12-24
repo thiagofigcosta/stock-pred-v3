@@ -1,6 +1,6 @@
 # stock-pred-v3, the prophet of the stock market
 
-based on: https://https://github.com/thiagofigcosta/stock-pred-v2
+Based on: https://https://github.com/thiagofigcosta/stock-pred-v2
 
 ## Running on Host
 
@@ -82,6 +82,7 @@ pip install --user tensorflow
 ```
 
 Install [graphviz](https://graphviz.gitlab.io/download/).
+
 Install [TA-Lib](https://pypi.org/project/TA-Lib/).
 
 ## Running with Docker
@@ -101,7 +102,7 @@ docker run -d stock-pred:3.0.0
 or
 
 ```
-docker run -e MODE='lstm' -d stock-pred:2.0.0
+docker run -e MODE='lstm' -d stock-pred:3.0.0
 ```
 
 ## Running with Docker-Compose
