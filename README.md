@@ -59,6 +59,17 @@ or
 sudo zypper install graphviz
 ```
 
+Install [TA-Lib](https://pypi.org/project/TA-Lib/).
+
+### Install deps mac:
+```
+brew install graphviz
+brew install python@3.9
+CPPFLAGS="$CPPFLAGS $(python3.9-config --include)"
+brew install ta-lib
+pip install TA-Lib
+```
+
 ### Install deps windows:
 
 Open anaconda console and type:
@@ -71,6 +82,7 @@ pip install --user tensorflow
 ```
 
 Install [graphviz](https://graphviz.gitlab.io/download/).
+Install [TA-Lib](https://pypi.org/project/TA-Lib/).
 
 ## Running with Docker
 

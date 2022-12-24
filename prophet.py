@@ -1,7 +1,7 @@
-import math
 import os
 from typing import Union, Optional
 
+import math
 import numpy as np
 
 from hyperparameters import Hyperparameters
@@ -35,7 +35,6 @@ ARCHITECTURE_SUBDIR = 'architecture'
 HISTORY_SUBDIR = 'history'
 METRICS_SUBDIR = 'metrics'
 PROPHET_DIR = 'prophets'
-DROP_NAN_BEFORE_COMPUTE_METRICS = True
 
 
 class CustomCallback(Callback):

@@ -111,9 +111,9 @@ def getArgumentParser(prog: str) -> argparse.ArgumentParser:
         sub_p.add_argument('--end', required=True, type=str, help='The end date to crawl the data till', metavar='end')
 
         sub_p.add_argument('--dry_run', action='store_true', default=False,
-                            help='Shows the arguments provided without debating or running, :)')
+                           help='Shows the arguments provided without debating or running, :)')
         sub_p.add_argument('--agg_method', type=str, default='VOTING_EXP_F_WEIGHTED_AVERAGE',
-                            help='The method of uniting redundant previsions', metavar='agg')
+                           help='The method of uniting redundant previsions', metavar='agg')
         sub_p.add_argument('--lstm_p', type=int, help='Parallelism for LSTM Networks', metavar='lstm_cores')
 
     # nas mode args

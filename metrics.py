@@ -1,19 +1,18 @@
-import math
 import os
 import warnings
 from enum import Enum, auto
 from typing import Union, Callable, Optional
 
+import math
 import numpy as np
 from sklearn import metrics as sk_metrics
 from sklearn.exceptions import UndefinedMetricWarning
-
-from prophet import DROP_NAN_BEFORE_COMPUTE_METRICS
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # DISABLE TENSORFLOW WARNING
 import tensorflow as tf
 
 EPSILON = 1e-07
+DROP_NAN_BEFORE_COMPUTE_METRICS = True
 
 
 class Metric(Enum):
@@ -181,7 +180,7 @@ def manualCosineSimilarity(predictions: list[Optional[float]], labels: list[Opti
     return cos_sim
 
 
-def dropNanValuesSimultaneously(array_a: Union[np.ndarray, list], 
+def dropNanValuesSimultaneously(array_a: Union[np.ndarray, list],
                                 array_b: Union[np.ndarray, list]) -> tuple[np.ndarray, np.ndarray]:
     if type(array_a) is list:
         array_a = np.array(array_a)

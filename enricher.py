@@ -3,9 +3,6 @@ from typing import Optional
 
 import numpy as np
 import pandas as pd
-# Kinda messy to install TA-Lib:
-# > brew install python@3.9 ; CPPFLAGS="$CPPFLAGS $(python3.9-config --include)" ; brew install ta-lib ; \
-# pip install TA-Lib # https://mrjbq7.github.io/ta-lib/install.html
 import talib
 
 from hyperparameters import Hyperparameters

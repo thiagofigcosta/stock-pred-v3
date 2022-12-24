@@ -1,8 +1,8 @@
 import copy as cp
-import math
 from enum import Enum, auto
 from typing import Union, Optional
 
+import math
 import numpy as np
 from sklearn.utils import shuffle
 
@@ -411,7 +411,6 @@ def encodeRollingWindows(features: Union[list[np.ndarray], np.ndarray], labels: 
     useful_train_data, _ = filterDoubleRollingWindow(features, backward_samples, labels, forward_samples,
                                                      keep_future_features)
     return useful_train_data
-
 
 
 def encodeRollingWindowsNumpySafe(features: Union[list[np.ndarray], np.ndarray],

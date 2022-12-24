@@ -9,7 +9,7 @@ from matplotlib import pyplot as plt, pylab
 from matplotlib.backend_bases import FigureManagerBase
 from pymoo.core.plot import Plot
 
-from logger import exception, fatal
+from logger import fatal
 from utils_date import getNowStr
 from utils_fs import createFolder, pathJoin
 from utils_misc import getRunId
