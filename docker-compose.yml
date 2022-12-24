@@ -1,5 +1,4 @@
-version: '3.3'
-
+version: "3.3"
 services:
   stock-prev-v3-the-prophet:
     build:
@@ -16,7 +15,6 @@ services:
       MODE: "NAS"
       SS_ID: "SearchSpace"
       POP_SZ: "126"
-#      CHILDREN_SZ: "2000"
       MAX_EVAL: "1260"
       NAS_ALG: "NSGAIII"
       NAS_OBJ: "5"
@@ -35,8 +33,8 @@ services:
       replicas: 1
       resources:
         limits:
-          cpus: '10'
+          cpus: "10"
           memory: 70G
         reservation:
-          cpus: '4'
+          cpus: "4"
           memory: 10G
