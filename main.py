@@ -26,9 +26,21 @@ def fastPreset(respect_nsga3: bool = True) -> list:
     pop_sz = 126 if respect_nsga3 else 8
     max_gens = 10
     agg = AggregationMethod.VOTING_EXP_F_WEIGHTED_AVERAGE
-    nas_parallelism, lstm_parallelism = 6, 2
+    nas_parallelism, lstm_parallelism = -2, 2
     return runNas('goog', '01/01/2018', '30/11/2022', 'FastOne', pop_sz * max_gens, pop_sz, ga_alg=alg, agg_method=agg,
                   nas_parallelism=nas_parallelism, lstm_parallelism=lstm_parallelism, ref_dir_configs=ref_dir_configs)
+
+
+def bigPreset(respect_nsga3: bool = True) -> list:
+    alg = GAAlgorithm.NSGA3.setObjs(5)
+    ref_dir_configs = (-1, 1)
+    pop_sz = 126 if respect_nsga3 else 8
+    max_gens = 20
+    agg = AggregationMethod.VOTING_EXP_F_WEIGHTED_AVERAGE
+    nas_parallelism, lstm_parallelism = -2, 2
+    return runNas('goog', '01/01/2018', '30/11/2022', 'SearchSpace', pop_sz * max_gens, pop_sz, ga_alg=alg,
+                  agg_method=agg, nas_parallelism=nas_parallelism, lstm_parallelism=lstm_parallelism,
+                  ref_dir_configs=ref_dir_configs)
 
 
 def runNas(ticker: str, start_date: str, end_date: str, ss_id: Union[str, int], max_eval: int, pop_sz: int,
@@ -180,7 +192,7 @@ def main(argv):
                    ga_alg=ga_alg, ref_dir_configs=ref_dir_configs, agg_method=agg_method, nas_parallelism=args.nas_p,
                    lstm_parallelism=args.lstm_p)
     elif mode == 'lstm':
-        pass
+        raise NotImplementedError()
     else:
         fatal(f'Invalid mode: {mode}')
 
