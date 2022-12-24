@@ -11,7 +11,7 @@ import numpy as np
 
 from utils_random import randInt
 
-APP_RUN_ID = randInt(666666)
+APP_RUN_ID = None
 
 
 def getPythonVersion(getTuple: bool = False) -> Union[str, tuple]:
@@ -54,6 +54,9 @@ def isAppleSilicon() -> bool:
 
 
 def getRunId() -> int:
+    global APP_RUN_ID
+    if APP_RUN_ID is None:
+        APP_RUN_ID = randInt(666666, force_rng=True)
     return APP_RUN_ID
 
 

@@ -21,16 +21,17 @@ RUN tar -xzf /tmp/ta_lib.tar.gz
 RUN cd ta-lib/ && ./configure && make && make install
 
 COPY --from=builder /root/.local /root/.local
-COPY entrypoint.sh .
+COPY entrypoint.sh /
 COPY clean_up_generated_files.sh .
 COPY ./*.py ./
-RUN --mount=type=bind,source=jars,target=/build/jars \
- find datasets -type f -maxdepth 1  -print0 \
- | xargs -0 --no-run-if-empty --replace=source cp --force source >"." # workaround to copy only if exists
+# RUN --mount=type=bind,source=jars,target=/build/jars \
+#  find datasets -type f -maxdepth 1  -print0 \
+#  | xargs -0 --no-run-if-empty --replace=source cp --force source >"." # workaround to copy only if exists
 RUN mkdir -p hyperparameters ; mkdir -p logs ; mkdir -p models ; mkdir -p nas ; \
-mkdir -p prophets ; mkdir -p saved_plots ; mkdir -p experiments
+mkdir -p prophets ; mkdir -p saved_plots ; mkdir -p experiments ; mkdir -p datasets
 
-RUN chmod +x entrypoint.sh
+RUN chmod +x /entrypoint.sh
+RUN chmod +x clean_up_generated_files.sh
 RUN chmod -R 777 hyperparameters
 RUN chmod -R 777 logs
 RUN chmod -R 777 models
@@ -41,4 +42,4 @@ RUN chmod -R 777 experiments
 
 ENV PATH=/root/.local/bin:$PATH
 
-CMD ["entrypoint.sh"]
+CMD ["/entrypoint.sh"]
