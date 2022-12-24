@@ -1,12 +1,14 @@
+import math
 import os
 import warnings
 from enum import Enum, auto
 from typing import Union, Callable, Optional
 
-import math
 import numpy as np
 from sklearn import metrics as sk_metrics
 from sklearn.exceptions import UndefinedMetricWarning
+
+from prophet import DROP_NAN_BEFORE_COMPUTE_METRICS
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # DISABLE TENSORFLOW WARNING
 import tensorflow as tf
@@ -179,8 +181,22 @@ def manualCosineSimilarity(predictions: list[Optional[float]], labels: list[Opti
     return cos_sim
 
 
+def dropNanValuesSimultaneously(array_a: Union[np.ndarray, list], 
+                                array_b: Union[np.ndarray, list]) -> tuple[np.ndarray, np.ndarray]:
+    if type(array_a) is list:
+        array_a = np.array(array_a)
+    if type(array_b) is list:
+        array_b = np.array(array_b)
+    nan_from_a = list(np.argwhere(np.isnan(array_a)).squeeze())
+    nan_from_b = list(np.argwhere(np.isnan(array_b)).squeeze())
+    nan_from_both = list(set(nan_from_a + nan_from_b))
+    return np.delete(array_a, nan_from_both), np.delete(array_b, nan_from_both)
+
+
 def computeAllManualRegressionMetrics(predictions: list[Optional[float]], labels: list[Optional[float]],
                                       label: Optional[str] = None, prefix: Optional[str] = None) -> dict:
+    if DROP_NAN_BEFORE_COMPUTE_METRICS:
+        predictions, labels = dropNanValuesSimultaneously(predictions, labels)
     label = f'_{label}' if label is not None else ''
     prefix = f'_{prefix}' if prefix is not None else ''
     metrics = {prefix + 'mae' + label: manualMeanAbsoluteError(predictions, labels),
@@ -196,6 +212,8 @@ def computeAllManualBinaryMetrics(predictions: list[int], labels: list[int], lab
                                   prefix: Optional[str] = None) -> dict:
     predictions = np.array(predictions).reshape(-1)
     labels = np.array(labels).reshape(-1)
+    if DROP_NAN_BEFORE_COMPUTE_METRICS:
+        predictions, labels = dropNanValuesSimultaneously(predictions, labels)
     warnings.filterwarnings("error")
     try:
         false_pos, true_pos, roc_thresholds = sk_metrics.roc_curve(labels, predictions)
