@@ -553,7 +553,7 @@ class Prophet(object):
         return Prophet._getOverwrittenByCpMetricsFilepath(self.basename, self.path_subdir)
 
     def getProphetFilepath(self) -> str:
-        return Prophet._getProphetFilepath(self.basename, self.path_subdir)
+        return Prophet.getProphetFilepathFromBasename(self.basename, self.path_subdir)
 
     def enhancedLoss(self, loss_name):
         # TODO ADAPT THIS TO OUR CONTEXT
@@ -664,7 +664,7 @@ class Prophet(object):
         return pathJoin(MODELS_DIR, path_subdir, METRICS_SUBDIR, filename_changed)
 
     @staticmethod
-    def _getProphetFilepath(basename: str, path_subdir: str = "") -> str:
+    def getProphetFilepathFromBasename(basename: str, path_subdir: str = "") -> str:
         filename_no_ext = removeFileExtension(basename)
         filename_changed = ''
         if not filename_no_ext.strip().endswith('.') and filename_no_ext.strip() != '':

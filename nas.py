@@ -464,7 +464,8 @@ class ProphetNAS(ProblemClass):
                     return
             else:
                 prophet_path = Prophet.genProphetBasename(hyperparameters, basename=hyperparameters.name)
-                prophet = Prophet.load(prophet_path, do_log=ProphetNAS.VERBOSE_CALLBACKS,
+                prophet = Prophet.load(Prophet.getProphetFilepathFromBasename(prophet_path, str(getRunId())),
+                                       do_log=ProphetNAS.VERBOSE_CALLBACKS,
                                        do_verbose=ProphetNAS.VERBOSE_CALLBACKS, path_subdir=f'{getRunId()}')
             predictions = prophet.prophesize(processed_data.encode(hyperparameters, copy=True),
                                              do_log=ProphetNAS.VERBOSE_CALLBACKS)
