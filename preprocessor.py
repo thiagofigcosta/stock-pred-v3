@@ -1,8 +1,8 @@
 import copy as cp
+import math
 from enum import Enum, auto
 from typing import Union, Optional
 
-import math
 import numpy as np
 from sklearn.utils import shuffle
 
@@ -265,22 +265,22 @@ class ProcessedDataset(object):
         if to_enc.hasTrain():
             if configs.network.shuffle:
                 to_enc.features_train, to_enc.labels_train = shuffle(to_enc.features_train, to_enc.labels_train)
-            to_enc.features_train, to_enc.labels_train = encodeRollingWindows(to_enc.features_train,
-                                                                              to_enc.labels_train,
-                                                                              backward_samples,
-                                                                              forward_samples)
+            to_enc.features_train, to_enc.labels_train = encodeRollingWindowsNumpySafe(to_enc.features_train,
+                                                                                       to_enc.labels_train,
+                                                                                       backward_samples,
+                                                                                       forward_samples)
             to_enc.labels_train = np.squeeze(to_enc.labels_train)
         if to_enc.hasVal():
-            to_enc.features_val, to_enc.labels_val = encodeRollingWindows(to_enc.features_val,
-                                                                          to_enc.labels_val,
-                                                                          backward_samples,
-                                                                          forward_samples)
+            to_enc.features_val, to_enc.labels_val = encodeRollingWindowsNumpySafe(to_enc.features_val,
+                                                                                   to_enc.labels_val,
+                                                                                   backward_samples,
+                                                                                   forward_samples)
             to_enc.labels_val = np.squeeze(to_enc.labels_val)
         if to_enc.hasTest():
-            to_enc.features_test, to_enc.labels_test = encodeRollingWindows(to_enc.features_test,
-                                                                            to_enc.labels_test,
-                                                                            backward_samples,
-                                                                            forward_samples, True)
+            to_enc.features_test, to_enc.labels_test = encodeRollingWindowsNumpySafe(to_enc.features_test,
+                                                                                     to_enc.labels_test,
+                                                                                     backward_samples,
+                                                                                     forward_samples, True)
             to_enc.labels_test = np.squeeze(to_enc.labels_test)
         to_enc.encoded = True
         return to_enc
@@ -411,3 +411,57 @@ def encodeRollingWindows(features: Union[list[np.ndarray], np.ndarray], labels: 
     useful_train_data, _ = filterDoubleRollingWindow(features, backward_samples, labels, forward_samples,
                                                      keep_future_features)
     return useful_train_data
+
+
+
+def encodeRollingWindowsNumpySafe(features: Union[list[np.ndarray], np.ndarray],
+                                  labels: Union[list[np.ndarray], np.ndarray],
+                                  backward_samples: int, forward_samples: int,
+                                  keep_future_features: bool = False) -> tuple:
+    # created because backwardsRollingWindowInc and forwardRollingWindowExc were failing when the window where equal to
+    # amount of features, this one is also faster
+    is_np = type(features) is np.ndarray
+    # backwardsRollingWindowInc
+    useful_train_back_data = []
+    past_useless_data = []
+    for i in range(len(features)):
+        i_plus_1 = i + 1
+        if i_plus_1 < backward_samples:
+            past_useless_data.append(features[i])  # base case
+        else:
+            this_window = features[i_plus_1 - backward_samples: i_plus_1][::-1]
+            useful_train_back_data.append(this_window)
+    if is_np:
+        useful_train_back_data = np.array(useful_train_back_data)
+        past_useless_data = np.array(past_useless_data)
+
+    # forwardRollingWindowExc
+    useful_train_fut_data = []
+    for i in range(len(labels) - 1):
+        if i >= len(labels) - forward_samples:
+            pass  # base case
+        else:
+            this_window = labels[i + 1: i + 1 + forward_samples]
+            useful_train_fut_data.append(this_window)
+    if is_np:
+        useful_train_fut_data = np.array(useful_train_fut_data)
+
+    # filterDoubleRollingWindow
+    diff = backward_samples - forward_samples
+    past_idx = backward_samples - diff
+    future_idx = forward_samples - 1 + diff
+
+    if not keep_future_features:
+        if not is_np:
+            past_useless_data += useful_train_back_data[-past_idx:]
+
+    if not keep_future_features:
+        useful_train_back_data = useful_train_back_data[:-past_idx]
+    useful_train_fut_data = useful_train_fut_data[future_idx:]
+
+    if is_np:
+        useful_train_back_data = np.reshape(np.vstack(useful_train_back_data),
+                                            ([useful_train_back_data.shape[0]] + list(useful_train_back_data[0].shape)))
+        useful_train_fut_data = np.reshape(np.vstack(useful_train_fut_data),
+                                           ([useful_train_fut_data.shape[0]] + list(useful_train_fut_data[0].shape)))
+    return useful_train_back_data, useful_train_fut_data
