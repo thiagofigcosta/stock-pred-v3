@@ -1,10 +1,10 @@
 FROM python:3.9 AS builder
 
-RUN apt-get install -y --no-install-recommends make cmake gcc lib6-dev
+RUN apt-get update && apt-get install -y --no-install-recommends make cmake gcc
 
-RUN wget http://prdownloads.sourceforge.net/ta-lib/ta-lib-0.4.0-src.tar.gz /tmp/ta_lib.gz
-RUN tar -xzf /tmp/ta_lib.gz
-RUN cd /tmp/ta-lib/ && ./configure && make && make install
+RUN wget http://prdownloads.sourceforge.net/ta-lib/ta-lib-0.4.0-src.tar.gz -O /tmp/ta_lib.tar.gz
+RUN tar -xzf /tmp/ta_lib.tar.gz
+RUN cd ta-lib && ./configure && make && make install
 
 COPY requirements_no_ver.txt .
 RUN pip install --user -r requirements.txt
@@ -14,11 +14,11 @@ RUN pip install --user -r requirements.txt
 FROM python:3.9-slim AS slim
 WORKDIR /code
 
-RUN apt-get install -y --no-install-recommends graphviz make cmake gcc lib6-dev procps
+RUN apt-get update && apt-get install -y --no-install-recommends graphviz make cmake gcc procps
 
-COPY --from=builder /tmp/ta_lib.gz /tmp/ta_lib.gz
-RUN tar -xzf /tmp/ta_lib.gz
-RUN cd /tmp/ta-lib/ && ./configure && make && make install
+COPY --from=builder /tmp/ta_lib.tar.gz /tmp/ta_lib.tar.gz
+RUN tar -xzf /tmp/ta_lib.tar.gz
+RUN cd ta-lib/ && ./configure && make && make install
 
 COPY --from=builder /root/.local /root/.local
 COPY entrypoint.sh .
