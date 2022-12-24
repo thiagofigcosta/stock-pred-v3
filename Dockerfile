@@ -1,20 +1,20 @@
 FROM python:3.9 AS builder
 
-RUN apt-get update && apt-get install -y --no-install-recommends make cmake gcc
+RUN apt-get update && apt-get install -y --no-install-recommends make cmake libc6-dev gcc
 
 RUN wget http://prdownloads.sourceforge.net/ta-lib/ta-lib-0.4.0-src.tar.gz -O /tmp/ta_lib.tar.gz
 RUN tar -xzf /tmp/ta_lib.tar.gz
 RUN cd ta-lib && ./configure && make && make install
 
 COPY requirements_no_ver.txt .
-RUN pip install --user -r requirements.txt
+RUN pip install --user -r requirements_no_ver.txt
 
 
 
 FROM python:3.9-slim AS slim
 WORKDIR /code
 
-RUN apt-get update && apt-get install -y --no-install-recommends graphviz make cmake gcc procps
+RUN apt-get update && apt-get install -y --no-install-recommends graphviz make cmake gcc libc6-dev procps
 
 COPY --from=builder /tmp/ta_lib.tar.gz /tmp/ta_lib.tar.gz
 RUN tar -xzf /tmp/ta_lib.tar.gz
@@ -24,7 +24,9 @@ COPY --from=builder /root/.local /root/.local
 COPY entrypoint.sh .
 COPY clean_up_generated_files.sh .
 COPY ./*.py ./
-COPY datasets/. datasets/
+RUN --mount=type=bind,source=jars,target=/build/jars \
+ find datasets -type f -maxdepth 1  -print0 \
+ | xargs -0 --no-run-if-empty --replace=source cp --force source >"." # workaround to copy only if exists
 RUN mkdir -p hyperparameters ; mkdir -p logs ; mkdir -p models ; mkdir -p nas ; \
 mkdir -p prophets ; mkdir -p saved_plots ; mkdir -p experiments
 
