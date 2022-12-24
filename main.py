@@ -110,11 +110,11 @@ def getArgumentParser(prog: str) -> argparse.ArgumentParser:
                            metavar='start')
         sub_p.add_argument('--end', required=True, type=str, help='The end date to crawl the data till', metavar='end')
 
-        parser.add_argument('--dry_run', action='store_true', default=False,
+        sub_p.add_argument('--dry_run', action='store_true', default=False,
                             help='Shows the arguments provided without debating or running, :)')
-        parser.add_argument('--agg_method', type=str, default='VOTING_EXP_F_WEIGHTED_AVERAGE',
+        sub_p.add_argument('--agg_method', type=str, default='VOTING_EXP_F_WEIGHTED_AVERAGE',
                             help='The method of uniting redundant previsions', metavar='agg')
-        parser.add_argument('--lstm_p', type=int, help='Parallelism for LSTM Networks', metavar='lstm_cores')
+        sub_p.add_argument('--lstm_p', type=int, help='Parallelism for LSTM Networks', metavar='lstm_cores')
 
     # nas mode args
     nas_parser.add_argument('--ss_id', required=True, type=str, help='The search space for the NAS',
