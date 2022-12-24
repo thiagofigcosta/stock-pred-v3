@@ -102,20 +102,19 @@ def getArgumentParser(prog: str) -> argparse.ArgumentParser:
     nas_parser = subparsers.add_parser('nas', help='Makes a neural architecture search!')
     lstm_parser = subparsers.add_parser('lstm', help='Runs over a specific set of hyperparameters')
 
-    # optional for all modes
-    parser.add_argument('--dry_run', action='store_true', default=False,
-                        help='Shows the arguments provided without debating or running, :)')
-    parser.add_argument('--agg_method', type=str, default='VOTING_EXP_F_WEIGHTED_AVERAGE',
-                        help='The method of uniting redundant previsions', metavar='agg')
-    parser.add_argument('--lstm_p', type=int, help='Parallelism for LSTM Networks', metavar='lstm_cores')
-
-    # mandatory for all modes
+    # arguments for all modes
     for mode, sub_p in subparsers.choices.items():
         sub_p.add_argument('--stock', required=True, type=str, nargs='?',
                            help='Provide the stock tickers to run, e.g. GOOG', metavar='stocks')
         sub_p.add_argument('--start', required=True, type=str, help='The start date to crawl the data from',
                            metavar='start')
         sub_p.add_argument('--end', required=True, type=str, help='The end date to crawl the data till', metavar='end')
+
+        parser.add_argument('--dry_run', action='store_true', default=False,
+                            help='Shows the arguments provided without debating or running, :)')
+        parser.add_argument('--agg_method', type=str, default='VOTING_EXP_F_WEIGHTED_AVERAGE',
+                            help='The method of uniting redundant previsions', metavar='agg')
+        parser.add_argument('--lstm_p', type=int, help='Parallelism for LSTM Networks', metavar='lstm_cores')
 
     # nas mode args
     nas_parser.add_argument('--ss_id', required=True, type=str, help='The search space for the NAS',

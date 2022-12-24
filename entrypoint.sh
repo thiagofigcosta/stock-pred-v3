@@ -50,7 +50,7 @@ nas_obj=`echo $NAS_OBJ | tr -d '"' | tr '[:upper:]' '[:lower:]'`
 
 # end mandatory
 
-stock_pred_v3_args="$mode --start=\"$start_date --end=$end_date --nap_p=$nas_p --lstm_p=$lstm_p --nas_alg=$nas_alg --nas_obj=$nas_obj\""
+stock_pred_v3_args="$mode --start=\"$start_date\" --end=\"$end_date\" --nas_p=\"$nas_p\" --lstm_p=\"$lstm_p\" --nas_alg=\"$nas_alg\" --nas_obj=$nas_obj\""
 
 if [[ "$DRY_RUN" = [tT][rR][uU][eE] ]] ; then
   stock_pred_v3_args="$stock_pred_v3_args --dry_run"
