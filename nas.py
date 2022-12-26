@@ -1,3 +1,4 @@
+import string
 import warnings
 from enum import Enum, auto
 from typing import Optional, Union
@@ -23,18 +24,19 @@ from pymoo.visualization.radar import Radar
 from pymoo.visualization.radviz import Radviz
 from pymoo.visualization.scatter import Scatter
 from pymoo.visualization.star_coordinate import StarCoordinate
+from sklearn.preprocessing import MinMaxScaler
 
 from hyperparameters import Hyperparameters, HYPERPARAMETERS_DIR
 from logger import info, warn, exception, error, clean
-from plotter import maybeSetFigureManager, showOrSavePymooPlot, getCMap
+from plotter import maybeSetFigureManager, showOrSavePymooPlot, getCMap, plot as plotter_plot
 from postprocessor import AggregationMethod
 from preprocessor import ProcessedDataset
 from prophet import Prophet
 from search_space import SearchSpace
 from transformer import loadAmountOfFeaturesFromFile
-from utils_date import getNowStr
+from utils_date import getNowStr, processTime, timestampToHumanReadable
 from utils_fs import createFolder, pathJoin
-from utils_misc import getCpuCount, mergeDicts, getRunId
+from utils_misc import getCpuCount, mergeDicts, getRunId, getRunIdStr, listToChunks
 from utils_persistance import saveJson
 
 EVALUATE_ONE_AT_THE_TIME = False
@@ -97,17 +99,20 @@ class GAAlgorithm(Enum):
 
 class NotificationCallback(Callback):
 
-    def __init__(self, verbose: bool, c_gen: list, c_eval: list, max_eval: list) -> None:
+    def __init__(self, verbose: bool, c_gen: list, c_eval: list, max_eval: list, gen_tss: list) -> None:
         super().__init__()
         self.verbose = verbose
         self.c_gen = c_gen
         self.c_eval = c_eval
         self.max_eval = max_eval
+        self.gen_tss = gen_tss
 
     def notify(self, algorithm):
         if self.verbose:
-            info(f'Finished generation {self.c_gen[0]}, there were {self.c_eval[0]} evaluations so far, going until '
-                 f'{self.max_eval[0]}, best result so far: {algorithm.pop.get("F").min()}!')
+            time_delta = self.gen_tss[-1] - self.gen_tss[-2]
+            info(f'Finished generation {self.c_gen[0]}, it took {timestampToHumanReadable(time_delta)}! There were '
+                 f'{self.c_eval[0]} evaluations so far, going until {self.max_eval}, '
+                 f'best result so far: {algorithm.pop.get("F").min(axis=0)}!')
 
 
 class DisplayCallback(Callback):
@@ -211,6 +216,7 @@ class ProphetNAS(ProblemClass):
         self.max_eval = None
         self.history = None
         self.solution = None
+        self.gen_p_times = []
         self.ref_directions = ref_directions
         self.n_partitions = n_partitions
         self.n_directions = None if ref_directions is None else len(ref_directions)
@@ -233,8 +239,8 @@ class ProphetNAS(ProblemClass):
             for i, individual in enumerate(x):
                 # train_mode=0 -> train and test
                 metrics = ProphetNAS._trainCallback((i, individual), self.c_gen[0], self.search_space,
-                                                    self.processed_data,
-                                                    self.agg_method, train_mode=0, n_features=self.n_features)
+                                                    self.processed_data, self.agg_method, train_mode=0,
+                                                    n_features=self.n_features)
                 for m, metric in enumerate(metrics):
                     if m < self.n_obj:
                         generation_metrics[m].append(metric)
@@ -245,7 +251,7 @@ class ProphetNAS(ProblemClass):
             d = [self.agg_method] * len(x)
             e = [1] * len(x)  # train_mode=0 -> train
             f = [self.n_features] * len(x)  # train_mode=0 -> train
-            with pp.ThreadPool(self.parallelism, maxtasksperchild=None) as pool:
+            with pp.ThreadPool(min(self.parallelism, len(x)), maxtasksperchild=None) as pool:
                 # cannot plot because matplot is not thread safe
                 # outputs = pool.map(ProphetNAS._trainCallback, enumerate(x), a, b, c, d, e, f)
                 success = pool.imap(ProphetNAS._trainCallback, enumerate(x), a, b, c, d, e, f)  # imap is non blocking
@@ -266,11 +272,6 @@ class ProphetNAS(ProblemClass):
                     if m < self.n_obj:
                         generation_metrics[m].append(metric)
 
-        self.c_gen[0] += 1
-        if type(x) is dict:
-            self.c_eval[0] += 1
-        else:
-            self.c_eval[0] += x.shape[0]
         if self.n_obj == 1:
             if type(x) is dict:
                 out["F"] = generation_metrics[0][0]
@@ -281,6 +282,12 @@ class ProphetNAS(ProblemClass):
                 out["F"] = np.array(generation_metrics).reshape(-1).tolist()
             else:
                 out["F"] = np.column_stack(generation_metrics)
+        self.c_gen[0] += 1
+        if type(x) is dict:
+            self.c_eval[0] += 1
+        else:
+            self.c_eval[0] += x.shape[0]
+        self.gen_p_times.append(processTime())
 
     def optimize(self, max_eval: int = 1000, parallelism: int = 1, verbose: bool = True,
                  store_metrics: bool = True, do_plot: bool = True, cache_n_features: bool = True) -> list:
@@ -294,20 +301,24 @@ class ProphetNAS(ProblemClass):
         if parallelism != 1:
             info(f'Parallelism on NAS: {parallelism}')
             maybeSetFigureManager()
+        info(f'Run ID: {getRunId()}')
         self.parallelism = parallelism
         self.c_gen = [0]  # array to used as reference
         self.c_eval = [0]  # array to used as reference
-        self.max_eval = [max_eval]  # array to used as reference
+        self.gen_p_times.clear()
+        self.gen_p_times.append(processTime())
+        self.max_eval = max_eval
         self.verbose = verbose
         res = minimize(
             self,
             self.algorithm,
             termination=('n_evals', max_eval),
             save_history=store_metrics,
-            callback=NotificationCallback(self.verbose, self.c_gen, self.c_eval, self.max_eval),
+            callback=NotificationCallback(self.verbose, self.c_gen, self.c_eval, self.max_eval, self.gen_p_times),
             display=DisplayCallback(self.algorithm, self.verbose),
             verbose=self.verbose
         )
+        info(f'Found {len(res.opt)} non-dominated solutions!')
         # parse history
         history = []
         if store_metrics:
@@ -336,69 +347,109 @@ class ProphetNAS(ProblemClass):
         warnings.filterwarnings("ignore")
         plot_kwargs = dict(tight_layout=True, figsize=(18, 16),
                            cmap=getCMap("tab10"))
-        if self.ref_directions is not None:
-            F = self.pareto_front(self.ref_directions)
-        else:
-            F = self.pareto_front()
-        labels = [key for key in res.opt[0].X.keys() if key in self.vars]
-        X = np.array([[sol.X[name] for name in labels] for sol in res.opt])
-        bounds = []
-        for name in labels:
-            if type(self.vars[name]) is Binary:
-                bounds.append((0, 1))
-            elif type(self.vars[name]) is Choice:
-                bounds.append((0, len(self.vars[name].options) - 1))
-            else:
-                bounds.append(self.vars[name].bounds)
-        bounds = np.array(bounds).T
 
-        title = 'Parallel Coordinate Plot (PCP)'
-        label = 'parallel_coordinate_pot'
-        plot = PCP(title=title, labels=labels, bounds=bounds, **plot_kwargs)
+        var_labels = [key for key in res.opt[0].X.keys() if key in self.vars]
+        non_dominated_individuals = np.array([[sol.X[name] for name in var_labels] for sol in res.opt])
+        var_bounds = []
+        for name in var_labels:
+            if type(self.vars[name]) is Binary:
+                var_bounds.append((0, 1))
+            elif type(self.vars[name]) is Choice:
+                var_bounds.append((0, len(self.vars[name].options) - 1))
+            else:
+                var_bounds.append(self.vars[name].bounds)
+        var_bounds = np.array(var_bounds).T
+
+        if len(res.algorithm.history) > 1:
+            all_individual_metrics = res.algorithm.history[0].pop.get('F')
+            best_individual_metrics = [res.algorithm.history[0].pop.get('F').min(axis=0)]
+            for hist in res.algorithm.history[1:]:
+                all_individual_metrics = np.concatenate((all_individual_metrics, hist.pop.get('F')))
+                best_individual_metrics.append(hist.pop.get('F').min(axis=0))
+            best_individual_metrics = np.array(best_individual_metrics).T
+        else:
+            all_individual_metrics = res.algorithm.pop.get("F")
+            best_individual_metrics = None
+        non_dominated_metrics = res.F
+        bounds = (0, 1)
+        metrics_scaler = MinMaxScaler(bounds)
+        non_dominated_metrics_norm = metrics_scaler.fit_transform(non_dominated_metrics)
+        all_individual_metrics_norm = metrics_scaler.transform(all_individual_metrics)
+
+        title = 'Vars Parallel Coordinate Plot (PCP)'
+        label = 'vars_parallel_coordinate_plot'
+        plot = PCP(title=title, labels=var_labels, bounds=var_bounds, **plot_kwargs)
         plot.set_axis_style(color="grey", alpha=1)
-        plot.add(X)
+        plot.add(non_dominated_individuals)
         showOrSavePymooPlot(plot, label)
 
-        if F is not None:
-            title = f"{'Pairwise ' if F.shape[1] > 3 else ''}Pareto Front"
-            label = f"{'pairwise_' if F.shape[1] > 3 else ''}pareto_front'"
-            plot = Scatter(title=title, **plot_kwargs)
-            plot.add(F, plot_type="line", color="black", alpha=0.7)
-            plot.add(res.F, facecolor="none", edgecolor="red")
-            showOrSavePymooPlot(plot, label)
+        title = 'Parallel Coordinate Plot (PCP)'
+        label = 'parallel_coordinate_plot'
+        plot = PCP(title=title, bounds=bounds, **plot_kwargs)
+        plot.set_axis_style(color="grey", alpha=1)
+        plot.add(non_dominated_metrics_norm)
+        showOrSavePymooPlot(plot, label)
 
-            title = 'Optimization Heatmap'
-            label = 'opt_heatmap'
-            plot = Heatmap(title=title, y_labels=None, labels=labels, bounds=bounds,
-                           **mergeDicts(dict(cmap=getCMap("Oranges_r")), plot_kwargs))
-            plot.add(F)
-            showOrSavePymooPlot(plot, label)
+        legend = False
+        title = f"{'Pairwise ' if non_dominated_metrics.shape[1] > 3 else ''}Pareto Front"
+        label = f"{'pairwise_' if non_dominated_metrics.shape[1] > 3 else ''}pareto_front"
+        plot = Scatter(title=title, legend=(legend, {'labels': ['Candidates', 'Solutions']}), **plot_kwargs)
+        plot.add(all_individual_metrics, color="black", alpha=0.7)
+        plot.add(non_dominated_metrics, facecolor="red", edgecolor="red", s=30)
+        showOrSavePymooPlot(plot, label)
 
-            title = 'Optimization Petal Plot'
-            label = 'petal'
-            plot = Petal(title=title, bounds=bounds, labels=labels,
-                         **mergeDicts(dict(cmap=getCMap("tab20")), plot_kwargs))
-            plot.add(F)
-            showOrSavePymooPlot(plot, label)
+        max_per_line = 3
+        multiple = max_per_line * math.ceil(len(non_dominated_metrics_norm) / max_per_line)
+        alphabet = string.ascii_uppercase + string.ascii_lowercase
+        several_sols_labels = [f'Solution {alphabet[i]}' for i in range(multiple)]
+        label = 'petal'
+        plot = Petal(title=several_sols_labels, bounds=bounds,
+                     **mergeDicts(dict(cmap=getCMap("tab20")), plot_kwargs))
+        for sols in listToChunks(non_dominated_metrics_norm, chunk_sz=max_per_line):
+            plot.add(sols)
+        showOrSavePymooPlot(plot, label)
 
-            title = 'Optimization Radar Plot'
-            label = 'radar'
-            plot = Radar(title=title, bounds=bounds, labels=labels, **plot_kwargs)
-            plot.add(F)
-            showOrSavePymooPlot(plot, label)
+        sol_labels = [f'Solution {alphabet[i]}' for i in range(len(non_dominated_metrics_norm))]
+        title = 'Optimization Heatmap'
+        label = 'heatmap'
+        plot = Heatmap(title=title, bounds=bounds, solution_labels=sol_labels,
+                       **mergeDicts(dict(cmap=getCMap("Oranges_r")), plot_kwargs))
+        plot.add(non_dominated_metrics_norm)
+        showOrSavePymooPlot(plot, label)
 
-            title = 'Optimization Radviz Plot'
-            label = 'radviz'
-            plot = Radviz(title=title, bounds=bounds, labels=labels, **plot_kwargs)
-            plot.add(F)
-            showOrSavePymooPlot(plot, label)
+        label = 'radar'
+        plot = Radar(title=several_sols_labels, bounds=bounds, **plot_kwargs)
+        for sols in listToChunks(non_dominated_metrics_norm, chunk_sz=max_per_line):
+            plot.add(sols)
+        showOrSavePymooPlot(plot, label)
 
-            title = 'Optimization Star Coordinate Plot'
-            label = 'starcoordinate'
-            plot = StarCoordinate(title=title, bounds=bounds, labels=labels, **plot_kwargs)
-            plot.add(F)
-            showOrSavePymooPlot(plot, label)
+        title = 'Optimization Radviz Plot'
+        label = 'radviz'
+        plot = Radviz(title=title, bounds=bounds,
+                      legend=(True, {'loc': "upper left", 'bbox_to_anchor': (-0.1, 1.08, 0, 0)}), **plot_kwargs)
+        plot.add(all_individual_metrics_norm, color="black", alpha=0.7, label='Candidates')
+        plot.add(non_dominated_metrics_norm, facecolor="red", edgecolor="red", s=30, label='Solutions')
+        showOrSavePymooPlot(plot, label)
 
+        title = 'Optimization Star Coordinate Plot'
+        label = 'star_coordinate'
+        plot = StarCoordinate(title=title, legend=(True, {'loc': "upper left", 'bbox_to_anchor': (-0.1, 1.08, 0, 0)}),
+                              axis_style={"color": "blue", 'alpha': 0.7}, bounds=bounds,
+                              arrow_style={"head_length": 0.015, "head_width": 0.03}, **plot_kwargs)
+        plot.add(all_individual_metrics_norm, color="black", alpha=0.7, label='Candidates')
+        plot.add(non_dominated_metrics_norm, facecolor="red", edgecolor="red", s=30, label='Solutions')
+        showOrSavePymooPlot(plot, label)
+
+        if best_individual_metrics is not None:
+            i = 1
+            for metric in best_individual_metrics:
+                plot_data = [('line', [list(range(1, len(metric) + 1, 1)), metric], {'label': f'f{i}'})]
+                title = f'Convergence analysis for f{i} metric'
+                label = f'convergence-f{i}'
+                plotter_plot(plot_data, title=title, y_label=f'f{i}', x_label='Generation',
+                             subdir='nas',
+                             add_rid_subdir=True, file_prefix=False, file_postfix=False, file_label=label)
+                i += 1
         warnings.resetwarnings()
 
     def save(self):
@@ -406,15 +457,16 @@ class ProphetNAS(ProblemClass):
             'algorithm': str(ProphetNAS.ALGORITHM),
             'n_obj': self.n_obj,
             'parallelism': self.parallelism,
-            'n_gen': self.c_gen[0],
-            'n_eval': self.c_eval[0],
-            'max_eval': self.max_eval[0],
+            'c_gen': self.c_gen[0],
+            'c_eval': self.c_eval[0],
+            'max_eval': self.max_eval,
             'agg_method': self.agg_method,
             'n_partitions': self.n_partitions,
             'n_directions': self.n_directions,
             'pop_size': self.pop_size,
             'children_per_gen': self.children_per_gen,
             'eliminate_duplicates': self.eliminate_duplicates,
+            'gen_p_times': self.gen_p_times,
             'saved_at': getNowStr(),
         }
         createFolder(ProphetNAS.getFilepath(''))
@@ -454,7 +506,7 @@ class ProphetNAS(ProblemClass):
                     prophet = Prophet.build(hyperparameters, basename=hyperparameters.name,
                                             do_log=ProphetNAS.VERBOSE_CALLBACKS,
                                             do_verbose=ProphetNAS.VERBOSE_CALLBACKS,
-                                            ignore_save_error=True, path_subdir=f'{getRunId()}')
+                                            ignore_save_error=True, path_subdir=getRunIdStr())
                 except ValueError:
                     s_dir = 'ERROR'
                     createFolder(pathJoin(HYPERPARAMETERS_DIR, s_dir))
@@ -469,9 +521,9 @@ class ProphetNAS(ProblemClass):
                     return
             else:
                 prophet_path = Prophet.genProphetBasename(hyperparameters, basename=hyperparameters.name)
-                prophet = Prophet.load(Prophet.getProphetFilepathFromBasename(prophet_path, str(getRunId())),
+                prophet = Prophet.load(Prophet.getProphetFilepathFromBasename(prophet_path, getRunIdStr()),
                                        do_log=ProphetNAS.VERBOSE_CALLBACKS,
-                                       do_verbose=ProphetNAS.VERBOSE_CALLBACKS, path_subdir=f'{getRunId()}')
+                                       do_verbose=ProphetNAS.VERBOSE_CALLBACKS, path_subdir=getRunIdStr())
             predictions = prophet.prophesize(processed_data.encode(hyperparameters, copy=True),
                                              do_log=ProphetNAS.VERBOSE_CALLBACKS)
             prophet.save(ignore_error=True, do_log=ProphetNAS.VERBOSE_CALLBACKS)
@@ -520,7 +572,7 @@ class ProphetNAS(ProblemClass):
 
     @staticmethod
     def getFilepath(basename: str) -> str:
-        return pathJoin(NAS_DIR, f'run_id-{getRunId():06d}', basename)
+        return pathJoin(NAS_DIR, getRunIdStr(), basename)
 
 
 createFolder(NAS_DIR)

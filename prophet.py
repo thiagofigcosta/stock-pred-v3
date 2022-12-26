@@ -15,7 +15,7 @@ from transformer import getTransformedTickerFilepath
 from utils_date import getNowStr
 from utils_fs import createFolder, pathJoin, removeFileExtension, getBasename, pathExists, copyFile, deleteFile, \
     moveFile
-from utils_misc import getRunId, numpyToListRecursive, listToChunks, getNumericTypes, getCpuCount
+from utils_misc import numpyToListRecursive, listToChunks, getNumericTypes, getCpuCount, getRunIdStr
 from utils_persistance import saveJson, loadJson, loadObj
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # DISABLE TENSORFLOW WARNING
@@ -388,7 +388,7 @@ class Prophet(object):
             if len(plot_chunks) > 1:
                 title += f' - {c + 1} of {len(plot_chunks)}'
                 file_label += f'-{c + 1}of{len(plot_chunks)}'
-            plot(plot_data, title=title, x_label='Close price (USD)', y_label='Date', legend=True,
+            plot(plot_data, title=title, y_label='Close price (USD)', x_label='Date', legend=True,
                  legend_outside=.3, resize=True, subdir=pathJoin(self.path_subdir, 'model_output'),
                  add_rid_subdir=False, file_prefix=plot_prefix, file_postfix=False, file_label=file_label)
 
@@ -422,7 +422,7 @@ class Prophet(object):
                 x_ticks = (all_data['dates'][-previous_data_points:] + future_dates, x_ticks_args)
             else:
                 x_ticks = (future_dates, x_ticks_args)
-            plot(plot_data, title=title, x_label='Close price (USD)', y_label='Date', legend=True,
+            plot(plot_data, title=title, y_label='Close price (USD)', x_label='Date', legend=True,
                  legend_outside=True, resize=True, x_ticks=x_ticks, subdir=pathJoin(self.path_subdir, 'model_output'),
                  add_rid_subdir=False, file_prefix=plot_prefix, file_postfix=False, file_label=file_label)
 
@@ -583,9 +583,9 @@ class Prophet(object):
                            include_counter: bool = False, include_net_id: bool = True) -> str:
         if basename is None or basename.strip() == '':
             if configs.name is not None:
-                basename = f'lstm_model{f"-run_{getRunId()}-" if include_rid else ""}{configs.name}'
+                basename = f'lstm_model{f"-{getRunIdStr()}-" if include_rid else ""}{configs.name}'
             else:
-                basename = f'lstm_model{f"-run_{getRunId()}-" if include_rid else ""}' \
+                basename = f'lstm_model{f"-{getRunIdStr()}-" if include_rid else ""}' \
                            f'-{str(Prophet._new_model_counter) if include_counter else ""}'
                 if include_counter:
                     Prophet._new_model_counter += 1

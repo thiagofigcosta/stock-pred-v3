@@ -46,6 +46,10 @@ def assertStrDateFormat(date_str, date_format=HUMAN_DATE_FORMAT):
 
 
 def now() -> float:
+    return time.time()
+
+
+def processTime() -> float:
     return time.perf_counter()
 
 
@@ -95,3 +99,24 @@ def getDiffInYearsFromStrDate(date1: str, date2: str, date_format: str = HUMAN_D
             date_bigger_obj.month == date_smaller_obj.month and date_bigger_obj.day < date_smaller_obj.day):
         years -= 1
     return years
+
+
+def timestampToHumanReadable(timestamp, seconds=True):
+    if seconds:
+        timestamp_ms = timestamp * 1000
+    else:
+        timestamp_ms = timestamp
+    timestamp_ms = int(timestamp_ms)
+
+    tmp_1 = timestamp_ms // 1000
+    tmp_2 = tmp_1 // 60
+    tmp_3 = tmp_2 // 60
+    D = tmp_3 // 24
+    H = tmp_3 % 24
+    M = tmp_2 % 60
+    S = tmp_1 % 60
+    MS = timestamp_ms % 1000
+    out = f'{H:02}:{M:02}:{S:02}.{MS:06}'
+    if D > 0:
+        out = f'{D} days and {out}'
+    return out

@@ -7,15 +7,15 @@ services:
     restart: always
     environment:
       COMPRESS_AFTER: "True"
-      NAS_PARALLELISM: "-2"
-      LSTM_PARALLELISM: "1"
+      NAS_PARALLELISM: "0"
+      LSTM_PARALLELISM: "8"
       STOCK_LIST: "goog,pg,jnj,mmm,ko"
       START_DATE: "01/01/2002"
       END_DATE: "30/11/2022"
       MODE: "NAS"
-      SS_ID: "SearchSpace"
-      POP_SZ: "126"
-      MAX_EVAL: "1260"
+      SS_ID: "LessNodeTypes"
+      POP_SZ: "70"
+      MAX_EVAL: "1600"
       NAS_ALG: "NSGAIII"
       NAS_OBJ: "5"
       NAS_REF_DIRS_CONF: "(-1, 1)"
@@ -31,10 +31,10 @@ services:
       - ./experiments:/code/experiments
     deploy:
       replicas: 1
-#      resources:
-#        limits:
-#          cpus: "10"
-#          memory: 70G
-#        reservation:
-#          cpus: "4"
-#          memory: 10G
+      resources:
+        limits:
+          cpus: "28"
+          memory: 150G
+        reservation:
+          cpus: "10"
+          memory: 20G

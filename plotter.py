@@ -12,7 +12,7 @@ from pymoo.core.plot import Plot
 from logger import fatal
 from utils_date import getNowStr
 from utils_fs import createFolder, pathJoin
-from utils_misc import getRunId
+from utils_misc import getRunIdStr
 
 
 class PlotMode(Enum):
@@ -84,7 +84,7 @@ def getNextPlotFilepath(prefix: str = 'plot', label: str = '', plot_subdir: Opti
 
     filename = f'{prefix}{f"{label}" if label else ""}{postfix}.png'
     if add_run_id:
-        base_path = pathJoin(SAVED_PLOTS_PATH, f'run_id-{getRunId():06d}')
+        base_path = pathJoin(SAVED_PLOTS_PATH, getRunIdStr())
         createFolder(base_path)
     else:
         base_path = SAVED_PLOTS_PATH
@@ -314,12 +314,12 @@ def showOrSavePymooPlot(the_plot: Plot, label: str, subsubdir: Optional[str] = N
         if subsubdir is not None:
             pathJoin(plot_subdir, subsubdir)
         if DEFAULT_PLOT_MODE == PlotMode.SAVE_TO_FILE:
-            the_plot.show()
-        elif DEFAULT_PLOT_MODE in (PlotMode.BLOCKING_SHOW, PlotMode.NON_BLOCKING_SHOW):
             filepath = getNextPlotFilepath(prefix=prefix, label=label, plot_subdir=plot_subdir,
                                            add_run_id=True, counter_postfix=False,
                                            datetime_postfix=False)
             the_plot.save(filepath, dpi=FIGURE_DPI)
+        elif DEFAULT_PLOT_MODE in (PlotMode.BLOCKING_SHOW, PlotMode.NON_BLOCKING_SHOW):
+            the_plot.show()
     except:
         del the_plot
 

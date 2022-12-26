@@ -294,6 +294,28 @@ class SearchSpaceIterator:
 
 SSpaceType = SearchSpace.Type
 
+_SEARCH_SPACES_MAP = {
+    'SearchSpace': 0,
+    'SearchSpace-0': 0,
+    #
+    'Dummy': 1,
+    'DummySearchSpace': 1,
+    'SearchSpace-1': 1,
+    #
+    'Mid': 2,
+    'MidSearchSpace': 2,
+    'SearchSpace-2': 2,
+    #
+    'FastOne': 3,
+    'Fast': 3,
+    'SearchSpace-3': 3,
+    #
+    'SearchSpaceLessNodeTypes': 4,
+    'LessNodeTypes': 4,
+    'SearchSpace-4': 4,
+}
+_SEARCH_SPACES_MAP = {k.lower(): v for k, v in _SEARCH_SPACES_MAP.items()}
+
 
 def getActivationFuncsList(ss_id: int) -> list[ActivationFunc]:
     all_you_can_have = [
@@ -305,13 +327,13 @@ def getActivationFuncsList(ss_id: int) -> list[ActivationFunc]:
         ActivationFunc.SELU,
         ActivationFunc.ELU,
     ]
-    if ss_id == getSearchSpaceIdByName('searchspace'):
+    if ss_id == getSearchSpaceIdByName('SearchSpace'):
         out = all_you_can_have
-    elif ss_id == getSearchSpaceIdByName('dummy'):
+    elif ss_id == getSearchSpaceIdByName('Dummy'):
         out = all_you_can_have
-    elif ss_id == getSearchSpaceIdByName('mid'):
+    elif ss_id == getSearchSpaceIdByName('Mid'):
         out = all_you_can_have
-    elif ss_id == getSearchSpaceIdByName('fast'):
+    elif ss_id in (getSearchSpaceIdByName('Fast'), getSearchSpaceIdByName('LessNodeTypes')):
         out = [
             ActivationFunc.LEAKY_RELU,
             ActivationFunc.SIGMOID,
@@ -335,13 +357,13 @@ def getRecurrentActivationFuncsList(ss_id: int) -> list[ActivationFunc]:
         ActivationFunc.SELU,
         ActivationFunc.ELU,
     ]
-    if ss_id == getSearchSpaceIdByName('searchspace'):
+    if ss_id == getSearchSpaceIdByName('SearchSpace'):
         out = all_you_can_have
-    elif ss_id == getSearchSpaceIdByName('dummy'):
+    elif ss_id == getSearchSpaceIdByName('Dummy'):
         out = all_you_can_have
-    elif ss_id == getSearchSpaceIdByName('mid'):
+    elif ss_id == getSearchSpaceIdByName('Mid'):
         out = all_you_can_have
-    elif ss_id == getSearchSpaceIdByName('fast'):
+    elif ss_id in (getSearchSpaceIdByName('Fast'), getSearchSpaceIdByName('LessNodeTypes')):
         out = [
             ActivationFunc.RELU,
             ActivationFunc.SIGMOID,
@@ -356,27 +378,8 @@ def getRecurrentActivationFuncsList(ss_id: int) -> list[ActivationFunc]:
     return out
 
 
-_SEARCH_SPACES_MAP = {
-    'SearchSpace': 0,
-    'SearchSpace-0': 0,
-    #
-    'Dummy': 1,
-    'DummySearchSpace': 1,
-    'SearchSpace-1': 1,
-    #
-    'Mid': 2,
-    'MidSearchSpace': 2,
-    'SearchSpace-2': 2,
-    #
-    'FastOne': 3,
-    'Fast': 3,
-    'SearchSpace-3': 3,
-}
-_SEARCH_SPACES_MAP = {k.lower(): v for k, v in _SEARCH_SPACES_MAP.items()}
-
-
 def getSearchSpace(dataset_filename: Optional[str] = None, name: Optional[str] = None,
-                   preprocess_on_nas: bool = False) -> SearchSpace:
+                   preprocess_on_nas: bool = False, space_id_name: str = 'SearchSpace') -> SearchSpace:
     ss = SearchSpace()
     if dataset_filename is not None:
         ss.add(name='dataset_filename', data_type=SSpaceType.CONSTANT, const=getBasename(dataset_filename))
@@ -384,31 +387,31 @@ def getSearchSpace(dataset_filename: Optional[str] = None, name: Optional[str] =
         ss.add(name='name', data_type=SSpaceType.CONSTANT, const=name)
     ss.add(name='backward_samples', data_type=SSpaceType.INT, min_value=5, max_value=60)
     ss.add(name='forward_samples', data_type=SSpaceType.INT, min_value=7, max_value=7)  # TODO 7 - 14
-    ss.add(name='max_epochs', data_type=SSpaceType.INT, min_value=500, max_value=5000)
+    ss.add(name='max_epochs', data_type=SSpaceType.INT, min_value=500, max_value=6000)
     ss.add(name='stateful', data_type=SSpaceType.BOOLEAN)
     ss.add(name='batch_size', data_type=SSpaceType.INT, min_value=0, max_value=128)
     ss.add(name='dense_instead_lstm_on_out', data_type=SSpaceType.BOOLEAN)
-    ss.add(name='patience_epochs_stop', data_type=SSpaceType.INT, min_value=100, max_value=5000)
-    ss.add(name='patience_epochs_reduce', data_type=SSpaceType.INT, min_value=0, max_value=1000)
+    ss.add(name='patience_epochs_stop', data_type=SSpaceType.INT, min_value=100, max_value=1800)
+    ss.add(name='patience_epochs_reduce', data_type=SSpaceType.INT, min_value=0, max_value=800)
     ss.add(name='reduce_factor', data_type=SSpaceType.FLOAT, min_value=0, max_value=0.2)
     ss.add(name='optimizer', data_type=SSpaceType.INT, **getEnumRange(Optimizer))
     ss.add(name='shuffle', data_type=SSpaceType.BOOLEAN)
     ss.add(name='n_hidden_lstm_layers', data_type=SSpaceType.INT, min_value=0, max_value=3)
-    ss.add(name='layer_sizes', data_type=SSpaceType.INT, min_value=10, max_value=80)
+    ss.add(name='layer_sizes', data_type=SSpaceType.INT, min_value=10, max_value=100)
     ss.add(name='activation_funcs', data_type=SSpaceType.CHOICE,
-           choices=getActivationFuncsList(getSearchSpaceIdByName('searchspace')))
+           choices=getActivationFuncsList(getSearchSpaceIdByName(space_id_name)))
     ss.add(name='rec_activation_funcs', data_type=SSpaceType.CHOICE,
-           choices=getRecurrentActivationFuncsList(getSearchSpaceIdByName('searchspace')))
+           choices=getRecurrentActivationFuncsList(getSearchSpaceIdByName(space_id_name)))
     ss.add(name='dropout', data_type=SSpaceType.FLOAT, min_value=0, max_value=0.3)
     ss.add(name='rec_dropout', data_type=SSpaceType.FLOAT, min_value=0, max_value=0.3)
-    ss.add(name='kernel_l1_regularizer', data_type=SSpaceType.FLOAT, min_value=0, max_value=0.3)
-    ss.add(name='bias_l1_regularizer', data_type=SSpaceType.FLOAT, min_value=0, max_value=0.3)
-    ss.add(name='recurrent_l1_regularizer', data_type=SSpaceType.FLOAT, min_value=0, max_value=0.3)
-    ss.add(name='activity_l1_regularizer', data_type=SSpaceType.FLOAT, min_value=0, max_value=0.3)
-    ss.add(name='kernel_l2_regularizer', data_type=SSpaceType.FLOAT, min_value=0, max_value=0.3)
-    ss.add(name='bias_l2_regularizer', data_type=SSpaceType.FLOAT, min_value=0, max_value=0.3)
-    ss.add(name='recurrent_l2_regularizer', data_type=SSpaceType.FLOAT, min_value=0, max_value=0.3)
-    ss.add(name='activity_l2_regularizer', data_type=SSpaceType.FLOAT, min_value=0, max_value=0.3)
+    ss.add(name='kernel_l1_regularizer', data_type=SSpaceType.FLOAT, min_value=0, max_value=0.1)
+    ss.add(name='bias_l1_regularizer', data_type=SSpaceType.FLOAT, min_value=0, max_value=0.1)
+    ss.add(name='recurrent_l1_regularizer', data_type=SSpaceType.FLOAT, min_value=0, max_value=0.1)
+    ss.add(name='activity_l1_regularizer', data_type=SSpaceType.FLOAT, min_value=0, max_value=0.1)
+    ss.add(name='kernel_l2_regularizer', data_type=SSpaceType.FLOAT, min_value=0, max_value=0.1)
+    ss.add(name='bias_l2_regularizer', data_type=SSpaceType.FLOAT, min_value=0, max_value=0.1)
+    ss.add(name='recurrent_l2_regularizer', data_type=SSpaceType.FLOAT, min_value=0, max_value=0.1)
+    ss.add(name='activity_l2_regularizer', data_type=SSpaceType.FLOAT, min_value=0, max_value=0.1)
     ss.add(name='use_bias', data_type=SSpaceType.BOOLEAN)
     ss.add(name='unit_forget_bias', data_type=SSpaceType.BOOLEAN)
     ss.add(name='go_backwards', data_type=SSpaceType.BOOLEAN)
@@ -554,13 +557,17 @@ def getSearchSpaceById(ss_id: Union[str, int], dataset_filename: Optional[str] =
 
     if ss_id < 0 or ss_id > len(_SEARCH_SPACES_MAP):
         raise ValueError(f'Invalid SS id {ss_id}')
-    if ss_id == 0:
-        return getSearchSpace(dataset_filename=dataset_filename, name=name, preprocess_on_nas=preprocess_on_nas)
-    elif ss_id == 1:
-        return getMidSearchSpace(dataset_filename=dataset_filename, name=name, preprocess_on_nas=preprocess_on_nas)
-    elif ss_id == 2:
+    if ss_id == getSearchSpaceIdByName('SearchSpace'):
+        return getSearchSpace(dataset_filename=dataset_filename, name=name, preprocess_on_nas=preprocess_on_nas,
+                              space_id_name='SearchSpace')
+    elif ss_id == getSearchSpaceIdByName('Dummy'):
         return getDummySearchSpace(dataset_filename=dataset_filename, name=name, preprocess_on_nas=preprocess_on_nas)
-    elif ss_id == 3:
+    elif ss_id == getSearchSpaceIdByName('Mid'):
+        return getMidSearchSpace(dataset_filename=dataset_filename, name=name, preprocess_on_nas=preprocess_on_nas)
+    elif ss_id == getSearchSpaceIdByName('Fast'):
         return getFastSearchSpace(dataset_filename=dataset_filename, name=name, preprocess_on_nas=preprocess_on_nas)
+    elif ss_id == getSearchSpaceIdByName('LessNodeTypes'):
+        return getSearchSpace(dataset_filename=dataset_filename, name=name, preprocess_on_nas=preprocess_on_nas,
+                              space_id_name='LessNodeTypes')
     else:
         raise ValueError(f'Not handled SS id {ss_id}')

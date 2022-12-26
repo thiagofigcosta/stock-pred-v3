@@ -60,6 +60,10 @@ def getRunId() -> int:
     return APP_RUN_ID
 
 
+def getRunIdStr() -> str:
+    return f'run_id-{getRunId():06d}'
+
+
 def getFibonacciSeq(size: int) -> list[int]:
     if size <= 1:
         return [0]
@@ -81,14 +85,14 @@ def hashStr(string: str, low_resolution: bool = False) -> str:
 def listToChunks(array: list[Any], n_chunks: Optional[int] = None, chunk_sz: Optional[int] = None,
                  filter_empty: bool = False) -> list[list]:
     if chunk_sz is not None:
-        c_n, remainder = divmod(len(array), chunk_sz)
+        c_n = math.ceil(len(array) / chunk_sz)
         c_size = chunk_sz
     elif n_chunks is not None:
-        c_size, remainder = divmod(len(array), n_chunks)
+        c_size = math.ceil(len(array) / n_chunks)
         c_n = n_chunks
     else:
         raise AttributeError('You must provide either chunk_sz or n_chunks')
-    chunks = [array[i * c_size + min(i, remainder):(i + 1) * c_size + min(i + 1, remainder)] for i in range(c_n)]
+    chunks = [array[i * c_size:i * c_size + c_size] for i in range(c_n)]
     if filter_empty:
         chunks = list(filter(lambda x: len(x) > 0, chunks))
     return chunks
