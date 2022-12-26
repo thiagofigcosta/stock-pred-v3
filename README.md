@@ -62,6 +62,7 @@ sudo zypper install graphviz
 Install [TA-Lib](https://pypi.org/project/TA-Lib/).
 
 ### Install deps mac:
+
 ```
 brew install graphviz
 brew install python@3.9

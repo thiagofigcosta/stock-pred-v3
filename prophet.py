@@ -309,17 +309,17 @@ class Prophet(object):
             for agg_method, data in all_data['predictions'].items():
                 manual_metrics[f'{d_type}'][AggregationMethod.strNoSpace(agg_method)] = data['metrics']
                 values.append((agg_method, data['vals']))
-                if data['metrics']['binary']['graphs']['pr']:
+                if data['metrics']['binary']['graphs']['pr'] is not None:
                     precisions = data['metrics']['binary']['graphs']['pr']['precisions']
                     recalls = data['metrics']['binary']['graphs']['pr']['recalls']
                     if precisions is not None and recalls is not None:
                         pr_graph.append([agg_method, [recalls, precisions]])
-                if data['metrics']['binary']['graphs']['roc']:
+                if data['metrics']['binary']['graphs']['roc'] is not None:
                     false_pos = data['metrics']['binary']['graphs']['roc']['false_pos']
                     true_pos = data['metrics']['binary']['graphs']['roc']['true_pos']
                     if false_pos is not None and true_pos is not None:
                         roc_graph.append([agg_method, [false_pos, true_pos]])
-                if data['metrics']['binary']['graphs']['cm']:
+                if data['metrics']['binary']['graphs']['cm'] is not None:
                     cm_graph.append([agg_method, data['metrics']['binary']['graphs']['cm']])
                 future = data.get('future', None)
                 if future is not None:

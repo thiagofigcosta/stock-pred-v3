@@ -196,14 +196,30 @@ def computeAllManualRegressionMetrics(predictions: list[Optional[float]], labels
                                       label: Optional[str] = None, prefix: Optional[str] = None) -> dict:
     if DROP_NAN_BEFORE_COMPUTE_METRICS:
         predictions, labels = dropNanValuesSimultaneously(predictions, labels)
+
+    if len(predictions) > 0 and len(labels) > 0:
+        mae = manualMeanAbsoluteError(predictions, labels)
+        mape = manualMeanAbsolutePercentageError(predictions, labels)
+        mse = manualMeanSquaredError(predictions, labels)
+        rmse = manualRootMeanSquaredError(predictions, labels)
+        r2 = manualR2(predictions, labels)
+        cos_sim = manualCosineSimilarity(predictions, labels)
+    else:
+        mae = float('inf')
+        mape = float('inf')
+        mse = float('inf')
+        rmse = float('inf')
+        r2 = float('-inf')
+        cos_sim = float('-inf')
+
     label = f'_{label}' if label is not None else ''
     prefix = f'_{prefix}' if prefix is not None else ''
-    metrics = {prefix + 'mae' + label: manualMeanAbsoluteError(predictions, labels),
-               prefix + 'mape' + label: manualMeanAbsolutePercentageError(predictions, labels),
-               prefix + 'mse' + label: manualMeanSquaredError(predictions, labels),
-               prefix + 'rmse' + label: manualRootMeanSquaredError(predictions, labels),
-               prefix + 'r2' + label: manualR2(predictions, labels),
-               prefix + 'cos_sim' + label: manualCosineSimilarity(predictions, labels)}
+    metrics = {prefix + 'mae' + label: mae,
+               prefix + 'mape' + label: mape,
+               prefix + 'mse' + label: mse,
+               prefix + 'rmse' + label: rmse,
+               prefix + 'r2' + label: r2,
+               prefix + 'cos_sim' + label: cos_sim}
     return metrics
 
 
@@ -214,41 +230,52 @@ def computeAllManualBinaryMetrics(predictions: list[int], labels: list[int], lab
     if DROP_NAN_BEFORE_COMPUTE_METRICS:
         predictions, labels = dropNanValuesSimultaneously(predictions, labels)
     warnings.filterwarnings("error")
-    try:
-        false_pos, true_pos, roc_thresholds = sk_metrics.roc_curve(labels, predictions)
-        false_pos = false_pos.tolist()
-        true_pos = true_pos.tolist()
-        roc_thresholds = roc_thresholds.tolist()
-    except (ValueError, UndefinedMetricWarning):
+    if len(predictions) > 0 and len(labels) > 0:
+        try:
+            false_pos, true_pos, roc_thresholds = sk_metrics.roc_curve(labels, predictions)
+            false_pos = false_pos.tolist()
+            true_pos = true_pos.tolist()
+            roc_thresholds = roc_thresholds.tolist()
+        except (ValueError, UndefinedMetricWarning):
+            false_pos = true_pos = roc_thresholds = None
+        try:
+            precisions, recalls, pr_thresholds = sk_metrics.precision_recall_curve(labels, predictions)
+            precisions = precisions.tolist()
+            recalls = recalls.tolist()
+            pr_thresholds = pr_thresholds.tolist()
+        except (ValueError, UndefinedMetricWarning):
+            precisions = recalls = pr_thresholds = None
+        try:
+            roc_auc_score = sk_metrics.roc_auc_score(labels, predictions)
+        except (ValueError, UndefinedMetricWarning):
+            roc_auc_score = float('-inf')
+        try:
+            acc = sk_metrics.accuracy_score(labels, predictions)
+        except UndefinedMetricWarning:
+            acc = float('-inf')
+        try:
+            prec = sk_metrics.precision_score(labels, predictions)
+        except UndefinedMetricWarning:
+            prec = float('-inf')
+        try:
+            rec = sk_metrics.recall_score(labels, predictions)
+        except UndefinedMetricWarning:
+            rec = float('-inf')
+        try:
+            f1 = sk_metrics.f1_score(labels, predictions)
+        except UndefinedMetricWarning:
+            f1 = float('-inf')
+        cm = sk_metrics.confusion_matrix(labels, predictions).tolist()
+    else:
         false_pos = true_pos = roc_thresholds = None
-    try:
-        precisions, recalls, pr_thresholds = sk_metrics.precision_recall_curve(labels, predictions)
-        precisions = precisions.tolist()
-        recalls = recalls.tolist()
-        pr_thresholds = pr_thresholds.tolist()
-    except (ValueError, UndefinedMetricWarning):
         precisions = recalls = pr_thresholds = None
-    try:
-        roc_auc_score = sk_metrics.roc_auc_score(labels, predictions)
-    except (ValueError, UndefinedMetricWarning):
-        roc_auc_score = -1
-    try:
-        acc = sk_metrics.accuracy_score(labels, predictions)
-    except UndefinedMetricWarning:
-        acc = -1
-    try:
-        prec = sk_metrics.precision_score(labels, predictions)
-    except UndefinedMetricWarning:
-        prec = -1
-    try:
-        rec = sk_metrics.recall_score(labels, predictions)
-    except UndefinedMetricWarning:
-        rec = -1
-    try:
-        f1 = sk_metrics.f1_score(labels, predictions)
-    except UndefinedMetricWarning:
-        f1 = -1
-    cm = sk_metrics.confusion_matrix(labels, predictions).tolist()
+        roc_auc_score = float('-inf')
+        acc = float('-inf')
+        prec = float('-inf')
+        rec = float('-inf')
+        f1 = float('-inf')
+        cm = None
+
     label = f'_{label}' if label is not None else ''
     prefix = f'_{prefix}' if prefix is not None else ''
     metrics = {prefix + 'acc' + label: acc,

@@ -506,10 +506,10 @@ class ProphetNAS(ProblemClass):
     @staticmethod
     def parseMetric(value: Union[int, float, np.float32], minimization_metric: bool,
                     name: Optional[str] = None) -> Union[int, float, np.float32]:
-        if value is None or value != value:
+        if value is None or value != value or np.isnan(value):
             value = ProphetNAS.WORST_VALUE
             warn(f'Error on {name} metric ({value})!')
-        if not minimization_metric:
+        elif not minimization_metric:
             value *= -1  # since this is a minimization problem
         return value
 
