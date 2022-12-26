@@ -35,6 +35,3 @@ services:
         limits:
           cpus: "28"
           memory: 150G
-        reservation:
-          cpus: "10"
-          memory: 20G
