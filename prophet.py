@@ -459,8 +459,9 @@ class Prophet(object):
                                          boxstyle='round'))
             plot_data = [
                 ('im', [cm],
-                 {'interpolation': 'nearest', 'cmap': getColorGradientsFromIndex(2, True), 'auto_range': True,
-                  'auto_range_factors': (1, .95)}),
+                 {'interpolation': 'nearest', 'cmap': getColorGradientsFromIndex(2, True),  # 'auto_range': True,
+                  'vmin': 0, 'vmax': int(sum([sum(x) for x in cm]) / 2)  # 'auto_range_factors': (1, .95)
+                  }),
                 ('colorbar', None, {}),
                 ('suptitle', [title], {}),
                 ('axhline', [0.5], line_kwargs),
