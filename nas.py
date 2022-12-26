@@ -115,6 +115,7 @@ class DisplayCallback(Callback):
         super().__init__()
         self.output = algorithm.output
         self.verbose = verbose
+        self.all_updates = []
 
     def update(self, algorithm, **kwargs):
         output = self.output
@@ -126,9 +127,13 @@ class DisplayCallback(Callback):
                 text += output.header(border=True) + '\n'
             text += output.text()
             clean(text)
+            self.all_updates.append(text)
 
     def finalize(self):
-        pass
+        if self.verbose and len(self.all_updates) > 0:
+            info('Overall updates:')
+            for update in self.all_updates:
+                clean(update)
 
 
 class ProphetNAS(ProblemClass):
