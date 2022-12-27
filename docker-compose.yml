@@ -9,7 +9,7 @@ services:
       CLEANUP_BEFORE: "False"
       COMPRESS_AFTER: "True"
       NAS_PARALLELISM: "28"
-      LSTM_PARALLELISM: "8"
+      LSTM_PARALLELISM: "10"
       STOCK_LIST: "goog,pg,jnj,mmm,ko"
       START_DATE: "01/01/2002"
       END_DATE: "30/11/2022"

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-delete_cmd="rm -rf __pycache__ hyperparameters logs models nas prophets saved_plots"
+delete_cmd="rm -rf __pycache__ hyperparameters/* logs/* models/* nas/* prophets/* saved_plots/*"
 arguments=`echo "$@" | tr '[:upper:]' '[:upper:]'`
 if [[ "$arguments" =~ "--force" ]] ; then
   eval "$delete_cmd"

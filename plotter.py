@@ -12,7 +12,7 @@ from pymoo.core.plot import Plot
 from logger import fatal
 from utils_date import getNowStr
 from utils_fs import createFolder, pathJoin
-from utils_misc import getRunIdStr
+from utils_misc import getRunIdStr, exceptionExpRetry
 
 
 class PlotMode(Enum):
@@ -239,9 +239,10 @@ def plot(plots: Union[tuple[str, list, dict], list[tuple[str, list, dict]]], mod
             fatal(Exception(f'Invalid plot_type: `{plot_type}`'))
 
     if title is not None:
-        fig = pylab.gcf()
-        fig.canvas.manager.set_window_title(title)
         plt.title(title)
+        fig = pylab.gcf()
+        if fig.canvas.manager is not None:
+            fig.canvas.manager.set_window_title(title)
     if x_label is not None:
         if type(x_label) is tuple:
             plt.xlabel(*x_label[:-1], **x_label[-1])
@@ -302,7 +303,9 @@ def plot(plots: Union[tuple[str, list, dict], list[tuple[str, list, dict]]], mod
         filepath = getNextPlotFilepath(prefix=file_prefix, label=file_label, plot_subdir=subdir,
                                        add_run_id=add_rid_subdir, counter_postfix=file_counter_postfix,
                                        datetime_postfix=file_datetime_postfix)
-        plt.savefig(filepath, bbox_inches='tight', dpi=FIGURE_DPI)
+
+        exceptionExpRetry(f'SavePlot-{file_label}', plt.savefig, [filepath], dict(bbox_inches='tight', dpi=FIGURE_DPI),
+                          3, raise_it=False)
         clearCurrentFigure()  # to clean up, when show not blocking or saving to file
         plt.figure(dpi=FIGURE_DPI)
 
