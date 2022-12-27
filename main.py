@@ -171,7 +171,7 @@ def main(argv):
                 if args.nas_ref_dir_conf is not None:
                     ref_params = args.nas_ref_dir_conf.replace('[', '').replace(']', ''). \
                         replace('(', '').replace(')', '').split(',')
-                    ref_dir_configs = (ref_params[0], ref_params[1])
+                    ref_dir_configs = (float(ref_params[0]), float(ref_params[1]))
             elif '2' in args.nas_alg or 'ii' in args.nas_alg.lower():
                 ga_alg = GAAlgorithm.NSGA2.setObjs(args.nas_obj)
         elif 'ga' in args.nas_alg.lower():

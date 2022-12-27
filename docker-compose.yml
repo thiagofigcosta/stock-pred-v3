@@ -6,6 +6,7 @@ services:
       dockerfile: Dockerfile
     restart: always
     environment:
+      CLEANUP_BEFORE: "False"
       COMPRESS_AFTER: "True"
       NAS_PARALLELISM: "0"
       LSTM_PARALLELISM: "8"

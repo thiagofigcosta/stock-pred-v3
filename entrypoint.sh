@@ -1,5 +1,11 @@
 #!/bin/bash
 
+if [[ "$CLEANUP_BEFORE" = [tT][rR][uU][eE] ]] ; then
+  /code/clean_up_generated_files.sh --force
+fi
+
+
+
 if [ -z ${NAS_PARALLELISM+x} ] || [ -z "$NAS_PARALLELISM" ] ; then # keep the +x
   echo "NAS_PARALLELISM is a mandatory env var"
   exit 1
