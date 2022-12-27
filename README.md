@@ -167,7 +167,7 @@ CMD ["/entrypoint.sh"]
 ```
 
 ### Create a `cleaner-docker-compose.yml` file
-With the contents:
+With the contents, be sure to edit the volumes section with your needs:
 ```yml
 version: "3.3"
 services:
@@ -176,6 +176,8 @@ services:
       context: .
       dockerfile: cleaner.Dockerfile
     restart: always
+    volumes:
+      - ./docker_volumes:/docker_volumes
 ```
 
 ### Run the dummy image
