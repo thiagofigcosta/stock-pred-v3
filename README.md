@@ -174,7 +174,7 @@ services:
   docker-root-owned-cleaner:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: cleaner.Dockerfile
     restart: always
 ```
 
