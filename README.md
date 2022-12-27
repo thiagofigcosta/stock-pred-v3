@@ -152,3 +152,40 @@ docker cp $(docker container ls | grep stock-pred | cut -f 1 -d' ' | head -n 1):
 ```
 mkdir -p experiment ; tar -zxvf exp.tar.gz -C experiment
 ```
+
+## Clean up root owned volumes manually with dummy image
+
+### Create a `cleaner.Dockerfile` file
+With the contents:
+```Dockerfile
+FROM python:3.9-slim AS slim
+RUN printf '#!/bin/bash\n\ntail -f /dev/null\n' > /entrypoint.sh
+
+RUN chmod +x /entrypoint.sh
+
+CMD ["/entrypoint.sh"]
+```
+
+### Create a `cleaner-docker-compose.yml` file
+With the contents:
+```yml
+version: "3.3"
+services:
+  docker-root-owned-cleaner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+```
+
+### Run the dummy image
+```bash
+docker-compose build -f cleaner-docker-compose.yml
+docker-compose up -d -f cleaner-docker-compose.yml
+```
+
+### Clean it up
+Do it manually:
+```bash
+docker exec -it $(docker container ls | grep docker-root-owned-cleaner | cut -f 1 -d' ' | head -n 1) bash
+```
