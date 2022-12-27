@@ -307,8 +307,8 @@ def exceptionExpRetry(name: str, function: Callable, args: list, kwargs: dict, m
                 t = exponentialBackoff(t, max_attempts, backoff_s)
                 warn(f'Failed to run `{name}`, attempt {t} of {max_attempts}!')
             except TimeoutError:
+                error(f'Failed to run `{name}` after {max_attempts} attempts!')
                 if raise_it:
                     raise e
                 else:
-                    error(f'Failed to run `{name}` after {max_attempts} attempts!')
                     exception(e, False)
