@@ -10,7 +10,7 @@ from typing import Any, Union, Optional, Type, Callable
 import math
 import numpy as np
 
-from logger import error, exception, warn
+from logger import error, exception, warn, info
 from utils_random import randInt, random
 
 APP_RUN_ID = None
@@ -299,14 +299,16 @@ def exceptionExpRetry(name: str, function: Callable, args: list, kwargs: dict, m
     while True:
         try:
             res = function(*args, **kwargs)
+            if t > 0:
+                info(f'Succeeded to run `{name}` on attempt {t + 1}!')
             return res
         except Exception as e:
             try:
                 t = exponentialBackoff(t, max_attempts, backoff_s)
-                warn(f'Failed to run {name}, attempt {t} of {max_attempts}!')
+                warn(f'Failed to run `{name}`, attempt {t} of {max_attempts}!')
             except TimeoutError:
                 if raise_it:
                     raise e
                 else:
-                    error(f'Failed to run {name} after {max_attempts} attempts!')
+                    error(f'Failed to run `{name}` after {max_attempts} attempts!')
                     exception(e, False)
