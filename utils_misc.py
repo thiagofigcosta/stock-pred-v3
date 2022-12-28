@@ -1,4 +1,5 @@
 import hashlib
+import math
 import os
 import platform
 import shutil
@@ -7,7 +8,6 @@ import time
 from enum import Enum
 from typing import Any, Union, Optional, Type, Callable
 
-import math
 import numpy as np
 
 from logger import error, exception, warn, info
@@ -281,19 +281,19 @@ def mergeDicts(high_priority: dict, low_priority: dict) -> dict:
     return {**low_priority, **high_priority}
 
 
-def exponentialBackoff(cur_retry: int = 0, max_attempts: int = 5, backoff_in_secs: float = 0.1):
+def exponentialBackoff(cur_retry: int = 0, max_retries: int = 5, backoff_in_secs: float = 0.1):
     # cur_retry starts with zero
-    if cur_retry < max_attempts:
+    if cur_retry < max_retries:
         exponential_delay = (2 ** cur_retry) * backoff_in_secs
-        random_delay = random()
+        random_delay = random() * backoff_in_secs
         time.sleep(exponential_delay + random_delay)
     else:
-        raise TimeoutError(f'Too many retries (`{max_attempts}`)')
+        raise TimeoutError(f'Too many retries (`{max_retries}`)')
     cur_retry += 1
     return cur_retry
 
 
-def runWithExpRetry(name: str, function: Callable, args: list, kwargs: dict, max_attempts: int,
+def runWithExpRetry(name: str, function: Callable, args: list, kwargs: dict, max_retries: int,
                     backoff_s: float = 0.1, raise_it: bool = True) -> Any:
     t = 0
     while True:
@@ -304,10 +304,10 @@ def runWithExpRetry(name: str, function: Callable, args: list, kwargs: dict, max
             return res
         except Exception as e:
             try:
-                t = exponentialBackoff(t, max_attempts, backoff_s)
-                warn(f'Failed to run `{name}`, attempt {t} of {max_attempts}!')
+                t = exponentialBackoff(t, max_retries, backoff_s)
+                warn(f'Failed to run `{name}`, attempt {t} of {max_retries + 1}!')
             except TimeoutError:
-                error(f'Failed to run `{name}` after {max_attempts} attempts!')
+                error(f'Failed to run `{name}` after {max_retries + 1} attempts!')
                 if raise_it:
                     raise e
                 else:
