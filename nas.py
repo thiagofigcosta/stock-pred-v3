@@ -36,7 +36,7 @@ from search_space import SearchSpace
 from transformer import loadAmountOfFeaturesFromFile
 from utils_date import getNowStr, processTime, timestampToHumanReadable
 from utils_fs import createFolder, pathJoin
-from utils_misc import getCpuCount, mergeDicts, getRunId, getRunIdStr, listToChunks, exceptionExpRetry
+from utils_misc import getCpuCount, mergeDicts, getRunId, getRunIdStr, listToChunks, runWithExpRetry
 from utils_persistance import saveJson
 
 EVALUATE_ONE_AT_THE_TIME = False
@@ -470,11 +470,11 @@ class ProphetNAS(ProblemClass):
             'saved_at': getNowStr(),
         }
         createFolder(ProphetNAS.getFilepath(''))
-        exceptionExpRetry(f'SaveNas-SS', saveJson,
-                          [self.search_space.toDict(), ProphetNAS.getFilepath('search_space.json')], {}, 3)
-        exceptionExpRetry(f'SaveNas-Hist', saveJson, [self.history, ProphetNAS.getFilepath('history.json')], {}, 3)
-        exceptionExpRetry(f'SaveNas-Sol', saveJson, [self.solution, ProphetNAS.getFilepath('solution.json')], {}, 3)
-        exceptionExpRetry(f'SaveNas', saveJson, [metadata, ProphetNAS.getFilepath('metadata.json')], {}, 3)
+        runWithExpRetry(f'SaveNas-SS', saveJson,
+                        [self.search_space.toDict(), ProphetNAS.getFilepath('search_space.json')], {}, 3)
+        runWithExpRetry(f'SaveNas-Hist', saveJson, [self.history, ProphetNAS.getFilepath('history.json')], {}, 3)
+        runWithExpRetry(f'SaveNas-Sol', saveJson, [self.solution, ProphetNAS.getFilepath('solution.json')], {}, 3)
+        runWithExpRetry(f'SaveNas', saveJson, [metadata, ProphetNAS.getFilepath('metadata.json')], {}, 3)
 
     @staticmethod
     def getIndId(i, gen: int = None, individual=None) -> str:

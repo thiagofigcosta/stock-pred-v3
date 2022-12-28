@@ -8,7 +8,7 @@ from logger import fatal, warn
 from prophet_enums import ActivationFunc, Optimizer, Loss
 from search_space import SearchSpace
 from utils_fs import getBasename, createFolder, pathJoin
-from utils_misc import hashStr, getNumericTypes, exceptionExpRetry
+from utils_misc import hashStr, getNumericTypes, runWithExpRetry
 from utils_persistance import loadJson, saveJson
 from utils_random import randInt
 
@@ -716,7 +716,7 @@ leaky_relu_alpha: {self.network.leaky_relu_alpha},
         if filepath is None:
             filepath = self.getConfigFilepath(subdir)
         hyperparameters_dict = self.toDict()
-        exceptionExpRetry(f'SaveHyperparams', saveJson, [hyperparameters_dict, filepath], {}, 3)
+        runWithExpRetry(f'SaveHyperparams', saveJson, [hyperparameters_dict, filepath], {}, 3)
         return filepath
 
     @staticmethod
@@ -1031,7 +1031,7 @@ leaky_relu_alpha: {self.network.leaky_relu_alpha},
 
     @staticmethod
     def loadJson(filepath: str) -> Hyperparameters:
-        return exceptionExpRetry(f'LoadHyperparams', loadJson, [filepath, Hyperparameters.jsonDecoder], {}, 3)
+        return runWithExpRetry(f'LoadHyperparams', loadJson, [filepath, Hyperparameters.jsonDecoder], {}, 3)
 
     @staticmethod
     def getDefault() -> Hyperparameters:

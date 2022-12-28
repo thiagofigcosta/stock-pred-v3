@@ -12,7 +12,7 @@ from pymoo.core.plot import Plot
 from logger import fatal
 from utils_date import getNowStr
 from utils_fs import createFolder, pathJoin
-from utils_misc import getRunIdStr, exceptionExpRetry
+from utils_misc import getRunIdStr, runWithExpRetry
 
 
 class PlotMode(Enum):
@@ -304,8 +304,8 @@ def plot(plots: Union[tuple[str, list, dict], list[tuple[str, list, dict]]], mod
                                        add_run_id=add_rid_subdir, counter_postfix=file_counter_postfix,
                                        datetime_postfix=file_datetime_postfix)
 
-        exceptionExpRetry(f'SavePlot-{file_label}', plt.savefig, [filepath], dict(bbox_inches='tight', dpi=FIGURE_DPI),
-                          3, raise_it=False)
+        runWithExpRetry(f'SavePlot-{file_label}', plt.savefig, [filepath], dict(bbox_inches='tight', dpi=FIGURE_DPI),
+                        3, raise_it=False)
         clearCurrentFigure()  # to clean up, when show not blocking or saving to file
         plt.figure(dpi=FIGURE_DPI)
 

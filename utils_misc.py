@@ -293,8 +293,8 @@ def exponentialBackoff(cur_retry: int = 0, max_attempts: int = 5, backoff_in_sec
     return cur_retry
 
 
-def exceptionExpRetry(name: str, function: Callable, args: list, kwargs: dict, max_attempts: int,
-                      backoff_s: float = 0.1, raise_it: bool = True) -> Any:
+def runWithExpRetry(name: str, function: Callable, args: list, kwargs: dict, max_attempts: int,
+                    backoff_s: float = 0.1, raise_it: bool = True) -> Any:
     t = 0
     while True:
         try:

@@ -15,7 +15,7 @@ from transformer import getTransformedTickerFilepath
 from utils_date import getNowStr
 from utils_fs import createFolder, pathJoin, removeFileExtension, getBasename, pathExists, copyFile, deleteFile, \
     moveFile
-from utils_misc import numpyToListRecursive, listToChunks, getNumericTypes, getCpuCount, getRunIdStr, exceptionExpRetry
+from utils_misc import numpyToListRecursive, listToChunks, getNumericTypes, getCpuCount, getRunIdStr, runWithExpRetry
 from utils_persistance import saveJson, loadJson, loadObj
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # DISABLE TENSORFLOW WARNING
@@ -141,7 +141,7 @@ class Prophet(object):
         }
         try:
             verbose('Saving model...', do_log)
-            exceptionExpRetry(f'SaveModel', self.model.save, [prophet["paths"]["model"]], {}, 3)
+            runWithExpRetry(f'SaveModel', self.model.save, [prophet["paths"]["model"]], {}, 3)
             verbose(f'Saved model at `{prophet["paths"]["model"]}`!', do_log)
         except Exception as e:
             if not ignore_error:
@@ -157,7 +157,7 @@ class Prophet(object):
 
         try:
             verbose('Saving training history...', do_log)
-            exceptionExpRetry(f'SaveModelHistory', saveJson, [self.history, prophet["paths"]["history"]], {}, 3)
+            runWithExpRetry(f'SaveModelHistory', saveJson, [self.history, prophet["paths"]["history"]], {}, 3)
             verbose(f'Saved training history at `{prophet["paths"]["history"]}`!', do_log)
         except Exception as e:
             if not ignore_error:
@@ -165,14 +165,14 @@ class Prophet(object):
 
         try:
             verbose('Saving eval metrics...', do_log)
-            exceptionExpRetry(f'SaveMetrics', saveJson, [self.metrics, prophet["paths"]["metrics"]], {}, 3)
+            runWithExpRetry(f'SaveMetrics', saveJson, [self.metrics, prophet["paths"]["metrics"]], {}, 3)
             verbose(f'Saved eval metrics at `{prophet["paths"]["metrics"]}`!', do_log)
         except Exception as e:
             if not ignore_error:
                 raise e
         try:
-            exceptionExpRetry(f'SaveProphet', saveJson, [prophet, prophet["paths"]["prophet"]], dict(sort_keys=False),
-                              3)
+            runWithExpRetry(f'SaveProphet', saveJson, [prophet, prophet["paths"]["prophet"]], dict(sort_keys=False),
+                            3)
         except Exception as e:
             if not ignore_error:
                 raise e
@@ -345,7 +345,7 @@ class Prophet(object):
             'manual_metrics': manual_metrics
         }
         verbose('Saving metrics...', do_log)
-        exceptionExpRetry(f'SaveProphesizedMetrics', saveJson, [self.metrics, self.getMetricsFilepath()], {}, 3)
+        runWithExpRetry(f'SaveProphesizedMetrics', saveJson, [self.metrics, self.getMetricsFilepath()], {}, 3)
         verbose(f'Saved metrics at `{self.getMetricsFilepath()}`!', do_log)
         info(f'Prophesied model `{self.basename}` for `{processed_data.ticker}` ticker!', do_log)
         return self.metrics
@@ -517,7 +517,7 @@ class Prophet(object):
 
     def scaleBack(self, dict_of_prices: dict) -> None:
         if self.scaler_path is not None and pathExists(self.scaler_path):
-            scaler = exceptionExpRetry(f'LoadScaler', loadObj, [self.scaler_path], {}, 3)[2]
+            scaler = runWithExpRetry(f'LoadScaler', loadObj, [self.scaler_path], {}, 3)[2]
             if scaler is not None:
                 for k in list(dict_of_prices.keys()):
                     for i in range(len(dict_of_prices[k])):
@@ -819,19 +819,19 @@ class Prophet(object):
     @staticmethod
     def load(prophet_filepath: str, do_log: bool = True, do_verbose: bool = True, path_subdir: str = "") -> Prophet:
         info(f'Loading prophet from `{prophet_filepath}`...', do_log)
-        prophet_meta = exceptionExpRetry(f'LoadProphet', loadJson, [prophet_filepath], {}, 3)
+        prophet_meta = runWithExpRetry(f'LoadProphet', loadJson, [prophet_filepath], {}, 3)
         basename = prophet_meta['basename']
-        model = exceptionExpRetry(f'LoadModel', load_model, [prophet_meta['paths']['model']],
-                                  dict(custom_objects=getAllCustomMetrics()), 3)
+        model = runWithExpRetry(f'LoadModel', load_model, [prophet_meta['paths']['model']],
+                                dict(custom_objects=getAllCustomMetrics()), 3)
         configs = Hyperparameters.loadJson(prophet_meta['paths']['hyperparameters'])  # already has exceptionExpRetry
         callbacks = Prophet._genCallbacks(configs, basename, path_subdir=path_subdir, do_verbose=do_verbose)
         prophet = Prophet(basename, model, callbacks, configs, do_verbose=do_verbose, path_subdir=path_subdir,
                           _create_key=Prophet.__create_key)
         prophet.scaler_path = prophet_meta['paths']['scaler']
         if pathExists(prophet_meta['paths']['history']):
-            prophet.history = exceptionExpRetry(f'LoadHistory', loadJson, [prophet_meta['paths']['history']], {}, 3)
+            prophet.history = runWithExpRetry(f'LoadHistory', loadJson, [prophet_meta['paths']['history']], {}, 3)
         if pathExists(prophet_meta['paths']['metrics']):
-            prophet.metrics = exceptionExpRetry(f'LoadMetrics', loadJson, [prophet_meta['paths']['metrics']], {}, 3)
+            prophet.metrics = runWithExpRetry(f'LoadMetrics', loadJson, [prophet_meta['paths']['metrics']], {}, 3)
         info(f'Loaded prophet!', do_log)
         return prophet
 
