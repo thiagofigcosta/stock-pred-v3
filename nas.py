@@ -549,7 +549,7 @@ class ProphetNAS(ProblemClass):
             if train_mode == 1:  # just train
                 return False
         except:
-            error('Unknown exception')
+            error('Unknown exception while evaluating!')
             got_exception = True
             if train_mode == 1:  # just train
                 return False
