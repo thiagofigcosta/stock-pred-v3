@@ -485,7 +485,7 @@ class ProphetNAS(ProblemClass):
     @staticmethod
     def _trainCallback(i_and_individual: tuple, gen: int, search_space: SearchSpace,
                        processed_data: ProcessedDataset, agg_method: str, train_mode: int,
-                       n_features: Optional[int] = None) -> Optional[tuple]:
+                       n_features: Optional[int] = None) -> Union[tuple, bool]:
         i, individual = i_and_individual
         mse = None
         f1 = None
@@ -511,15 +511,15 @@ class ProphetNAS(ProblemClass):
                 except ValueError:
                     s_dir = 'ERROR'
                     createFolder(pathJoin(HYPERPARAMETERS_DIR, s_dir))
-                    filep = hyperparameters.saveJson(subdir=s_dir)
-                    error(f'Error building LSTM network, hyperparameters saved at {filep}')
+                    filepath = hyperparameters.saveJson(subdir=s_dir)
+                    error(f'Error building LSTM network, hyperparameters saved at {filepath}')
                     raise Exception()
 
                 prophet.train(processed_data.encode(hyperparameters, copy=True), do_log=ProphetNAS.VERBOSE_CALLBACKS)
                 if train_mode == 1:  # just train
                     prophet.save(ignore_error=True, do_log=ProphetNAS.VERBOSE_CALLBACKS)
                     Prophet.destroy(prophet)
-                    return
+                    return True
             else:
                 prophet_path = Prophet.genProphetBasename(hyperparameters, basename=hyperparameters.name)
                 prophet = Prophet.load(Prophet.getProphetFilepathFromBasename(prophet_path, getRunIdStr()),
@@ -546,9 +546,13 @@ class ProphetNAS(ProblemClass):
         except Exception as e:
             exception(e, raise_exceptions)
             got_exception = True
+            if train_mode == 1:  # just train
+                return False
         except:
             error('Unknown exception')
             got_exception = True
+            if train_mode == 1:  # just train
+                return False
 
         if got_exception and not made_till_test:
             error('Could not finish evaluating this subject, all metrics are empty due to an exception probably!')
