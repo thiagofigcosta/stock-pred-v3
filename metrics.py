@@ -1,9 +1,9 @@
+import math
 import os
 import warnings
 from enum import Enum, auto
 from typing import Union, Callable, Optional
 
-import math
 import numpy as np
 from sklearn import metrics as sk_metrics
 from sklearn.exceptions import UndefinedMetricWarning
@@ -11,7 +11,7 @@ from sklearn.exceptions import UndefinedMetricWarning
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # DISABLE TENSORFLOW WARNING
 import tensorflow as tf
 
-EPSILON = 1e-07
+EPSILON = 1e-06
 DROP_NAN_BEFORE_COMPUTE_METRICS = True
 
 
@@ -174,6 +174,7 @@ def manualCosineSimilarity(predictions: list[Optional[float]], labels: list[Opti
         norm_labels += label ** 2
     norm_predictions = math.sqrt(norm_predictions)
     norm_labels = math.sqrt(norm_labels)
+    # Todo: invalid value encounterd in scalar divide?
     cos_sim = dot_product / max(EPSILON, (norm_predictions * norm_labels))
     if clip and cos_sim < 0:
         cos_sim = 0

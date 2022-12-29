@@ -257,6 +257,7 @@ def plot(plots: Union[tuple[str, list, dict], list[tuple[str, list, dict]]], mod
         plt.xticks(*x_ticks[:-1], **x_ticks[-1])
     if y_ticks is not None:
         plt.yticks(*y_ticks[:-1], **y_ticks[-1])
+    # Todo: this figure includes axes that are not compatible with tight_layout, maybe just filter out this
     if tight_layout or (type(legend_outside) is bool and legend_outside) or type(legend_outside) is float:
         if not legend_outside:
             plt.tight_layout()
@@ -266,6 +267,8 @@ def plot(plots: Union[tuple[str, list, dict], list[tuple[str, list, dict]]], mod
                 width += legend_outside
             plt.tight_layout(rect=[0, 0, width, 1])
 
+    # Todo: no artists with labels found to put in legend.
+    #  check if there is a label with len(data) > 0 before putting legend, to avoid this warning
     if (type(legend_outside) is bool and legend_outside) or type(legend_outside) is float:
         plt.legend(loc='center left', bbox_to_anchor=(FIGURE_LEGEND_X_ANCHOR, FIGURE_LEGEND_Y_ANCHOR))
     elif type(legend) is str:

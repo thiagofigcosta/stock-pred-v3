@@ -1,8 +1,8 @@
 import copy as cp
+import math
 from enum import Enum, auto
 from typing import Union, Optional
 
-import math
 import numpy as np
 from sklearn.utils import shuffle
 

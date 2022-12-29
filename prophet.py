@@ -1,7 +1,7 @@
+import math
 import os
 from typing import Union, Optional
 
-import math
 import numpy as np
 
 from hyperparameters import Hyperparameters

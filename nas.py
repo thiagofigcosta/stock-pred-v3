@@ -1,9 +1,9 @@
+import math
 import string
 import warnings
 from enum import Enum, auto
 from typing import Optional, Union
 
-import math
 import numpy as np
 import pathos.pools as pp
 from pymoo.algorithms.moo.nsga2 import NSGA2

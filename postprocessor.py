@@ -1,8 +1,8 @@
+import math
 import statistics
 from enum import Enum, auto
 from typing import Optional, Union, Any
 
-import math
 import numpy as np
 
 from metrics import computeAllManualRegressionMetrics, computeAllManualBinaryMetrics
