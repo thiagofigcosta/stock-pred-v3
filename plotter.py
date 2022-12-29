@@ -30,7 +30,7 @@ class PlotMode(Enum):
 
 
 DEFAULT_PLOT_MODE = PlotMode.SAVE_TO_FILE
-DEFAULT_BACKEND = matplotlib.get_backend()
+DEFAULT_BACKEND = None
 MAIN_THREAD_FIGURE_MANAGER = None
 SAVE_FILE_BACKEND = 'Agg'
 SAVED_PLOTS_PATH = 'saved_plots'
@@ -43,7 +43,26 @@ FIGURE_LEGEND_Y_ANCHOR = 0.5
 
 _saved_plots_counter = 0
 _had_a_non_blocking = False
+
 _current_backend = DEFAULT_BACKEND
+
+
+def getDefaultBackend():
+    global DEFAULT_BACKEND
+    if DEFAULT_BACKEND is None:
+        DEFAULT_BACKEND = matplotlib.get_backend()
+    return DEFAULT_BACKEND
+
+
+def setCurrentBackend(backend: str):
+    global _current_backend
+    _current_backend = backend
+
+
+def getCurrentBackend():
+    if _current_backend is None:
+        setCurrentBackend(getDefaultBackend())
+    return _current_backend
 
 
 def getPlotColorFromIndex(idx: int, colours_to_avoid: Optional[Union[list, str]] = None) -> str:
@@ -195,7 +214,9 @@ def plot(plots: Union[tuple[str, list, dict], list[tuple[str, list, dict]]], mod
          y_ticks: Optional[tuple[Union[list, np.ndarray, dict], ...]] = None, file_label: Optional[str] = None,
          subdir: Optional[str] = None, add_rid_subdir: bool = True, file_prefix: Union[str, bool] = 'plot',
          file_postfix: bool = True, file_datetime_postfix: bool = True, file_counter_postfix: bool = False) -> None:
-    global _had_a_non_blocking, _current_backend, DEFAULT_PLOT_MODE
+    global _had_a_non_blocking
+    current_backend = getCurrentBackend()
+    default_backend = getDefaultBackend()
 
     maybeSetFigureManager()
 
@@ -206,12 +227,12 @@ def plot(plots: Union[tuple[str, list, dict], list[tuple[str, list, dict]]], mod
         return
 
     if mode in (PlotMode.BLOCKING_SHOW, PlotMode.NON_BLOCKING_SHOW):
-        if _current_backend != DEFAULT_BACKEND:
-            matplotlib.use(DEFAULT_BACKEND)
-            _current_backend = DEFAULT_BACKEND
-    elif _current_backend != SAVE_FILE_BACKEND:
+        if current_backend != default_backend:
+            matplotlib.use(default_backend)
+            setCurrentBackend(default_backend)
+    elif current_backend != SAVE_FILE_BACKEND:
         matplotlib.use(SAVE_FILE_BACKEND)
-        _current_backend = SAVE_FILE_BACKEND
+        setCurrentBackend(SAVE_FILE_BACKEND)
     if type(plots) is tuple:
         plots = [plots]
     for p in plots:

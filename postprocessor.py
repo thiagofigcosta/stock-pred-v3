@@ -11,10 +11,36 @@ from utils_date import timestampToDateObj, timestampToDateStr, SAVE_DATE_FORMAT,
 from utils_misc import weightedAverage
 from utils_random import randInt
 
-_sequential_values_cache = {}
-_r_sequential_values_cache = {}
-_exp_sequential_values_cache = {}
-_exp_r_sequential_values_cache = {}
+
+class AuxiliaryCache(object):
+    _sequential_values_cache = None
+    _r_sequential_values_cache = None
+    _exp_sequential_values_cache = None
+    _exp_r_sequential_values_cache = None
+
+    @staticmethod
+    def getSeqVals():
+        if AuxiliaryCache._sequential_values_cache is None:
+            AuxiliaryCache._sequential_values_cache = {}
+        return AuxiliaryCache._sequential_values_cache
+
+    @staticmethod
+    def getRSeqVals():
+        if AuxiliaryCache._r_sequential_values_cache is None:
+            AuxiliaryCache._r_sequential_values_cache = {}
+        return AuxiliaryCache._r_sequential_values_cache
+
+    @staticmethod
+    def getExpSeqVals():
+        if AuxiliaryCache._exp_sequential_values_cache is None:
+            AuxiliaryCache._exp_sequential_values_cache = {}
+        return AuxiliaryCache._exp_sequential_values_cache
+
+    @staticmethod
+    def getRExpSeqVals():
+        if AuxiliaryCache._exp_r_sequential_values_cache is None:
+            AuxiliaryCache._exp_r_sequential_values_cache = {}
+        return AuxiliaryCache._exp_r_sequential_values_cache
 
 
 def syncPredictionsAndLabelsSize(predictions: Union[list[Optional[float]], list[tuple]],
@@ -245,10 +271,10 @@ def _aggFLMedian(predictions: Optional[list[Optional[list]]]) -> list[Optional[f
 
 
 def getSeqWeights(n: int) -> list[int]:
-    global _sequential_values_cache
-    if n not in _sequential_values_cache:
-        _sequential_values_cache[n] = list(range(1, n + 1, 1))
-    return _sequential_values_cache[n]
+    seq_vals = AuxiliaryCache.getSeqVals()
+    if n not in seq_vals:
+        seq_vals[n] = list(range(1, n + 1, 1))
+    return seq_vals[n]
 
 
 def _aggFWAverage(predictions: Optional[list[Optional[list]]]) -> list[Optional[float]]:
@@ -264,10 +290,10 @@ def _aggFWAverage(predictions: Optional[list[Optional[list]]]) -> list[Optional[
 
 
 def getRSeqWeights(n: int) -> list[int]:
-    global _r_sequential_values_cache
-    if n not in _r_sequential_values_cache:
-        _r_sequential_values_cache[n] = list(range(n, 0, -1))
-    return _r_sequential_values_cache[n]
+    r_seq_vals = AuxiliaryCache.getRSeqVals()
+    if n not in r_seq_vals:
+        r_seq_vals[n] = list(range(n, 0, -1))
+    return r_seq_vals[n]
 
 
 def _aggLWAverage(predictions: Optional[list[Optional[list]]]) -> list[Optional[float]]:
@@ -283,10 +309,10 @@ def _aggLWAverage(predictions: Optional[list[Optional[list]]]) -> list[Optional[
 
 
 def getExpSeqWeights(n: int) -> list[int]:
-    global _exp_sequential_values_cache
-    if n not in _exp_sequential_values_cache:
-        _exp_sequential_values_cache[n] = [math.exp(i) for i in range(1, n + 1, 1)]
-    return _exp_sequential_values_cache[n]
+    exp_seq_vals = AuxiliaryCache.getExpSeqVals()
+    if n not in exp_seq_vals:
+        exp_seq_vals[n] = [math.exp(i) for i in range(1, n + 1, 1)]
+    return exp_seq_vals[n]
 
 
 def _aggExpFWAverage(predictions: Optional[list[Optional[list]]]) -> list[Optional[float]]:
@@ -302,10 +328,10 @@ def _aggExpFWAverage(predictions: Optional[list[Optional[list]]]) -> list[Option
 
 
 def getExpRSeqWeights(n: int) -> list[int]:
-    global _exp_r_sequential_values_cache
-    if n not in _exp_r_sequential_values_cache:
-        _exp_r_sequential_values_cache[n] = [math.exp(i) for i in range(n, 0, -1)]
-    return _exp_r_sequential_values_cache[n]
+    r_exp_seq_vals = AuxiliaryCache.getRExpSeqVals()
+    if n not in r_exp_seq_vals:
+        r_exp_seq_vals[n] = [math.exp(i) for i in range(n, 0, -1)]
+    return r_exp_seq_vals[n]
 
 
 def _aggExpLWAverage(predictions: Optional[list[Optional[list]]]) -> list[Optional[float]]:
