@@ -319,3 +319,27 @@ def size(array: Union[list, set, np.ndarray]) -> int:
         return array.shape[0]
     else:
         return len(array)
+
+
+def scaleElementDiff(el: float, min_v: float, diff: float) -> float:
+    scaled = (el - min_v) / diff
+    return scaled
+
+
+def scaleElementMinMax(el: float, min_v: float, max_v: float) -> float:
+    diff = max_v - min_v
+    scaled = (el - min_v) / diff
+    return scaled
+
+
+def scaleArray(array: Union[list, set, np.ndarray], min_v: float, max_v: float) -> Union[list, set, np.ndarray]:
+    diff = max_v - min_v
+    scaled = [scaleElementDiff(x, min_v, diff) for x in array]
+    return scaled
+
+
+def minMaxScale(array: Union[list, set, np.ndarray]) -> tuple:
+    min_v = min(array)
+    max_v = max(array)
+    scaled = scaleArray(array, min_v, max_v)
+    return scaled, (min_v, max_v)

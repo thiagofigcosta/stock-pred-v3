@@ -8,7 +8,7 @@ import numpy as np
 from metrics import computeAllManualRegressionMetrics, computeAllManualBinaryMetrics
 from preprocessor import DatasetSplit
 from utils_date import timestampToDateObj, timestampToDateStr, SAVE_DATE_FORMAT, getNextWorkDays, dateObjToTimestamp
-from utils_misc import weightedAverage, size
+from utils_misc import weightedAverage, size, scaleElementDiff
 from utils_random import randInt
 
 
@@ -180,6 +180,17 @@ class AggregationMethod(Enum):
     VOTING_L_WEIGHTED_AVERAGE = auto()
     VOTING_EXP_F_WEIGHTED_AVERAGE = auto()
     VOTING_EXP_L_WEIGHTED_AVERAGE = auto()
+    # Under test
+    FILTERED_F_WEIGHTED_AVERAGE = auto()
+    FILTERED_L_WEIGHTED_AVERAGE = auto()
+    FILTERED_EXP_F_WEIGHTED_AVERAGE = auto()
+    FILTERED_EXP_L_WEIGHTED_AVERAGE = auto()
+    FILTERED_VOTING_MEAN = auto()
+    FILTERED_VOTING_MEDIAN = auto()
+    FILTERED_VOTING_F_WEIGHTED_AVERAGE = auto()
+    FILTERED_VOTING_L_WEIGHTED_AVERAGE = auto()
+    FILTERED_VOTING_EXP_F_WEIGHTED_AVERAGE = auto()
+    FILTERED_VOTING_EXP_L_WEIGHTED_AVERAGE = auto()
 
     def __str__(self) -> str:
         return self.name.lower().replace('_', ' ')
@@ -461,6 +472,77 @@ def _aggVotingExpLWAverage(predictions: Optional[list[Optional[list]]],
     return aggregated
 
 
+def removeOutliers(data: Union[list, np.ndarray], factor: float = 4) -> Union[list, np.ndarray]:
+    if size(data) < 3:
+        return data
+    is_list = type(data) is not np.ndarray
+    if is_list:
+        data = np.array(data)
+    median = np.median(data)
+    dist_from_median = np.abs(data - median)
+    median_dev = np.median(dist_from_median)  # MAD (median absolute deviation)
+    relative_dist = dist_from_median / median_dev if median_dev else 0
+    filtered = data[relative_dist < factor].reshape(-1)
+    if filtered.shape[0] < 2:
+        filtered = data
+    if is_list:
+        filtered = filtered.tolist()
+    return filtered
+
+
+def removeInnerOutliers(all_data: Union[list, np.ndarray], factor: float = 4) -> Union[list, np.ndarray]:
+    for i, data in enumerate(all_data):
+        if data is not None:
+            all_data[i] = removeOutliers(data, factor)
+    return all_data
+
+
+def _aggFilterFWAverage(predictions: Optional[list[Optional[list]]]) -> list[Optional[float]]:
+    return _aggFWAverage(removeInnerOutliers(predictions))
+
+
+def _aggFilterLWAverage(predictions: Optional[list[Optional[list]]]) -> list[Optional[float]]:
+    return _aggLWAverage(removeInnerOutliers(predictions))
+
+
+def _aggFilterExpFWAverage(predictions: Optional[list[Optional[list]]]) -> list[Optional[float]]:
+    return _aggExpFWAverage(removeInnerOutliers(predictions))
+
+
+def _aggFilterExpLWAverage(predictions: Optional[list[Optional[list]]]) -> list[Optional[float]]:
+    return _aggExpLWAverage(removeInnerOutliers(predictions))
+
+
+def _aggFilterVotingMean(predictions: Optional[list[Optional[list]]],
+                         previous_val: Optional[float] = None) -> list[Optional[float]]:
+    return _aggVotingMean(removeInnerOutliers(predictions), previous_val)
+
+
+def _aggFilterVotingMedian(predictions: Optional[list[Optional[list]]],
+                           previous_val: Optional[float] = None) -> list[Optional[float]]:
+    return _aggVotingMedian(removeInnerOutliers(predictions), previous_val)
+
+
+def _aggFilterVotingFWAverage(predictions: Optional[list[Optional[list]]],
+                              previous_val: Optional[float] = None) -> list[Optional[float]]:
+    return _aggVotingFWAverage(removeInnerOutliers(predictions), previous_val)
+
+
+def _aggFilterVotingLWAverage(predictions: Optional[list[Optional[list]]],
+                              previous_val: Optional[float] = None) -> list[Optional[float]]:
+    return _aggVotingLWAverage(removeInnerOutliers(predictions), previous_val)
+
+
+def _aggFilterVotingExpFWAverage(predictions: Optional[list[Optional[list]]],
+                                 previous_val: Optional[float] = None) -> list[Optional[float]]:
+    return _aggVotingExpFWAverage(removeInnerOutliers(predictions), previous_val)
+
+
+def _aggFilterVotingExpLWAverage(predictions: Optional[list[Optional[list]]],
+                                 previous_val: Optional[float] = None) -> list[Optional[float]]:
+    return _aggVotingExpLWAverage(removeInnerOutliers(predictions), previous_val)
+
+
 def aggregateDecodedPredictions(predictions: Optional[list[Optional[list]]], method: AggregationMethod,
                                 previous_val: Optional[float] = None) -> list[Optional[float]]:
     if method == AggregationMethod.FIRST:
@@ -495,6 +577,26 @@ def aggregateDecodedPredictions(predictions: Optional[list[Optional[list]]], met
         return _aggVotingExpFWAverage(predictions, previous_val)
     elif method == AggregationMethod.VOTING_EXP_L_WEIGHTED_AVERAGE:
         return _aggVotingExpLWAverage(predictions, previous_val)
+    elif method == AggregationMethod.FILTERED_F_WEIGHTED_AVERAGE:
+        return _aggFilterFWAverage(predictions)
+    elif method == AggregationMethod.FILTERED_L_WEIGHTED_AVERAGE:
+        return _aggFilterLWAverage(predictions)
+    elif method == AggregationMethod.FILTERED_EXP_F_WEIGHTED_AVERAGE:
+        return _aggFilterExpFWAverage(predictions)
+    elif method == AggregationMethod.FILTERED_EXP_L_WEIGHTED_AVERAGE:
+        return _aggFilterExpLWAverage(predictions)
+    elif method == AggregationMethod.FILTERED_VOTING_MEAN:
+        return _aggFilterVotingMean(predictions)
+    elif method == AggregationMethod.FILTERED_VOTING_MEDIAN:
+        return _aggFilterVotingMedian(predictions, previous_val)
+    elif method == AggregationMethod.FILTERED_VOTING_F_WEIGHTED_AVERAGE:
+        return _aggFilterVotingFWAverage(predictions, previous_val)
+    elif method == AggregationMethod.FILTERED_VOTING_L_WEIGHTED_AVERAGE:
+        return _aggFilterVotingLWAverage(predictions, previous_val)
+    elif method == AggregationMethod.FILTERED_VOTING_EXP_F_WEIGHTED_AVERAGE:
+        return _aggFilterVotingExpFWAverage(predictions, previous_val)
+    elif method == AggregationMethod.FILTERED_VOTING_EXP_L_WEIGHTED_AVERAGE:
+        return _aggFilterVotingExpLWAverage(predictions, previous_val)
     else:
         raise ValueError(f'Unknown method {method}')
 
@@ -534,8 +636,25 @@ def castRegressionToBinary(array: list[Union[np.float32, float]],
     return [1 if el > 0 else 0 for el in deltas]
 
 
+def castRegressionToBinaryConfidence(array: list[Union[np.float32, float]],
+                                     previous_value: Union[np.float32, float]) -> list[float]:
+    deltas = castRegressionToDelta(array, previous_value)
+    all_neg = [el for el in deltas if el <= 0]
+    all_neg_min = min(all_neg)
+    all_neg_max = max(all_neg)
+    all_neg_diff = all_neg_max - all_neg_min
+    all_pos = [el for el in deltas if el > 0]
+    all_pos_min = min(all_pos)
+    all_pos_max = max(all_pos)
+    all_pos_diff = all_pos_max - all_pos_min
+
+    return [scaleElementDiff(el, all_pos_min, all_pos_diff) * .49 + .51 if el > 0 else
+            scaleElementDiff(el, all_neg_min, all_neg_diff) * .49 for el in deltas]
+
+
 def computeMetricsAndGetValues(predictions: Union[dict, Optional[list[Optional[list]]]], labels: dict,
-                               prev_labels: dict, index_tracker: dict, dates_mapper: dict) -> dict:
+                               prev_labels: dict, index_tracker: dict, dates_mapper: dict,
+                               threshold: float = 0.5) -> dict:
     all_metrics_and_values = {}
     if type(predictions) is not dict:
         predictions = {'predictions': predictions}
@@ -553,10 +672,10 @@ def computeMetricsAndGetValues(predictions: Union[dict, Optional[list[Optional[l
             if 'label_vals' not in metrics_and_values:
                 metrics_and_values['label_vals'] = labels_synced
                 binary_labels = castRegressionToBinary(labels_synced, prev_labels[d_type])
-            binary_predictions = castRegressionToBinary(predictions_synced, prev_labels[d_type])
+            binary_predictions = castRegressionToBinaryConfidence(predictions_synced, prev_labels[d_type])
             # label=str(d_type).replace(' ', '_')
             r_metrics = computeAllManualRegressionMetrics(predictions_synced, labels_synced)
-            b_metrics = computeAllManualBinaryMetrics(binary_predictions, binary_labels)
+            b_metrics = computeAllManualBinaryMetrics(binary_predictions, binary_labels, threshold=threshold)
             metrics_and_values['predictions'][agg_method] = {
                 'vals': predictions_synced,
                 'metrics': {

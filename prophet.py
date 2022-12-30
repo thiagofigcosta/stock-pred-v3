@@ -298,7 +298,8 @@ class Prophet(object):
         tf_metrics = self.evaluate(processed_data, do_log=do_log)
         manual_metrics = {}
         all_metrics_and_values = computeMetricsAndGetValues(predictions, labels, processed_data.getPreviousLabelsDict(),
-                                                            processed_data.index_tracker, processed_data.dates_mapper)
+                                                            processed_data.index_tracker, processed_data.dates_mapper,
+                                                            threshold=self.configs.pred_threshold)
         for d_type, all_data in all_metrics_and_values.items():
             values = []
             future_dates = None

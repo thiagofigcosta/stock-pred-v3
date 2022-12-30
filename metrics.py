@@ -225,12 +225,16 @@ def computeAllManualRegressionMetrics(predictions: list[Optional[float]], labels
     return metrics
 
 
-def computeAllManualBinaryMetrics(predictions: list[int], labels: list[int], label: Optional[str] = None,
-                                  prefix: Optional[str] = None) -> dict:
+def computeAllManualBinaryMetrics(predictions: list[Union[int, float]], labels: list[int], label: Optional[str] = None,
+                                  prefix: Optional[str] = None, threshold: float = 0.5) -> dict:
     predictions = np.array(predictions).reshape(-1)
     labels = np.array(labels).reshape(-1)
     if DROP_NAN_BEFORE_COMPUTE_METRICS:
         predictions, labels = dropNanValuesSimultaneously(predictions, labels)
+    if any(int(x) != x or int(x) not in (0, 1) for x in predictions):  # if confidence
+        predictions_bin = np.array([1 if el > threshold else 0 for el in predictions])
+    else:
+        predictions_bin = predictions
     warnings.filterwarnings("error")
     if size(predictions) > 0 and size(labels) > 0:
         try:
@@ -252,22 +256,22 @@ def computeAllManualBinaryMetrics(predictions: list[int], labels: list[int], lab
         except (ValueError, UndefinedMetricWarning):
             roc_auc_score = float('-inf')
         try:
-            acc = sk_metrics.accuracy_score(labels, predictions)
+            acc = sk_metrics.accuracy_score(labels, predictions_bin)
         except UndefinedMetricWarning:
             acc = float('-inf')
         try:
-            prec = sk_metrics.precision_score(labels, predictions)
+            prec = sk_metrics.precision_score(labels, predictions_bin)
         except UndefinedMetricWarning:
             prec = float('-inf')
         try:
-            rec = sk_metrics.recall_score(labels, predictions)
+            rec = sk_metrics.recall_score(labels, predictions_bin)
         except UndefinedMetricWarning:
             rec = float('-inf')
         try:
-            f1 = sk_metrics.f1_score(labels, predictions)
+            f1 = sk_metrics.f1_score(labels, predictions_bin)
         except UndefinedMetricWarning:
             f1 = float('-inf')
-        cm = sk_metrics.confusion_matrix(labels, predictions).tolist()
+        cm = sk_metrics.confusion_matrix(labels, predictions_bin).tolist()
     else:
         false_pos = true_pos = roc_thresholds = None
         precisions = recalls = pr_thresholds = None
