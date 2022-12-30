@@ -8,7 +8,7 @@ from logger import fatal, warn
 from prophet_enums import ActivationFunc, Optimizer, Loss
 from search_space import SearchSpace
 from utils_fs import getBasename, createFolder, pathJoin
-from utils_misc import hashStr, getNumericTypes, runWithExpRetry
+from utils_misc import hashStr, getNumericTypes, runWithExpRetry, size
 from utils_persistance import loadJson, saveJson
 from utils_random import randInt
 
@@ -361,7 +361,7 @@ class Hyperparameters(object):
         # n_features, ignore
         if type(self.dataset.norm_range) is list:
             self.dataset.norm_range = tuple(self.dataset.norm_range)
-        norm_range = len(self.dataset.norm_range) == 2 and \
+        norm_range = size(self.dataset.norm_range) == 2 and \
                      -1 <= self.dataset.norm_range[0] <= 1 and \
                      -1 <= self.dataset.norm_range[1] <= 1 and type(self.dataset.norm_range) is tuple
         if not norm_range:
@@ -381,7 +381,7 @@ class Hyperparameters(object):
     def validate_pca(self) -> None:
         if type(self.pca.pca_norm_range) is list:
             self.pca.pca_norm_range = tuple(self.pca.pca_norm_range)
-        pca_norm_range = len(self.pca.pca_norm_range) == 2 and \
+        pca_norm_range = size(self.pca.pca_norm_range) == 2 and \
                          -1 <= self.pca.pca_norm_range[0] <= 1 and \
                          -1 <= self.pca.pca_norm_range[1] <= 1 and type(self.pca.pca_norm_range) is tuple
         if not pca_norm_range:
@@ -472,56 +472,56 @@ class Hyperparameters(object):
         if type(self.network.go_backwards) is bool:
             self.network.go_backwards = [self.network.go_backwards] * self.network.n_hidden_lstm_layers
 
-        if len(self.network.dropout) != self.network.n_hidden_lstm_layers:
+        if size(self.network.dropout) != self.network.n_hidden_lstm_layers:
             raise ValueError(f'Wrong dropout_values array size, should be {self.network.n_hidden_lstm_layers} '
-                             f'instead of {len(self.network.dropout)}')
-        if len(self.network.layer_sizes) != self.network.n_hidden_lstm_layers and not (
+                             f'instead of {size(self.network.dropout)}')
+        if size(self.network.layer_sizes) != self.network.n_hidden_lstm_layers and not (
                 self.network.layer_sizes[0] == self.network.backward_samples
-                and len(self.network.layer_sizes) == self.network.n_hidden_lstm_layers + 1):
+                and size(self.network.layer_sizes) == self.network.n_hidden_lstm_layers + 1):
             raise ValueError(f'Wrong layer_sizes array size, should be {self.network.n_hidden_lstm_layers}')
-        if len(self.network.activation_funcs) != self.network.n_hidden_lstm_layers:
+        if size(self.network.activation_funcs) != self.network.n_hidden_lstm_layers:
             raise ValueError(f'Wrong activation_functions array size, should be {self.network.n_hidden_lstm_layers}')
-        if len(self.network.rec_activation_funcs) != self.network.n_hidden_lstm_layers:
+        if size(self.network.rec_activation_funcs) != self.network.n_hidden_lstm_layers:
             raise ValueError(
                 f'Wrong recurrent_activation_functions array size, should be {self.network.n_hidden_lstm_layers}')
-        if len(self.network.use_bias) != self.network.n_hidden_lstm_layers:
+        if size(self.network.use_bias) != self.network.n_hidden_lstm_layers:
             raise ValueError(f'Wrong bias array size, should be {self.network.n_hidden_lstm_layers}')
-        if len(self.network.unit_forget_bias) != self.network.n_hidden_lstm_layers:
+        if size(self.network.unit_forget_bias) != self.network.n_hidden_lstm_layers:
             raise ValueError(f'Wrong unit_forget_bias array size, should be {self.network.n_hidden_lstm_layers}')
-        if len(self.network.go_backwards) != self.network.n_hidden_lstm_layers:
+        if size(self.network.go_backwards) != self.network.n_hidden_lstm_layers:
             raise ValueError(f'Wrong go_backwards array size, should be {self.network.n_hidden_lstm_layers}')
-        if len(self.network.rec_dropout) != self.network.n_hidden_lstm_layers:
+        if size(self.network.rec_dropout) != self.network.n_hidden_lstm_layers:
             raise ValueError(
                 f'Wrong rec_dropout array size, should be {self.network.n_hidden_lstm_layers}')
-        if len(self.network.kernel_l1_regularizer) != self.network.n_hidden_lstm_layers + 1:
+        if size(self.network.kernel_l1_regularizer) != self.network.n_hidden_lstm_layers + 1:
             raise ValueError(
                 f'Wrong kernel_l1_regularizer array size, should be {self.network.n_hidden_lstm_layers + 1}')
-        if len(self.network.bias_l1_regularizer) != self.network.n_hidden_lstm_layers + 1:
+        if size(self.network.bias_l1_regularizer) != self.network.n_hidden_lstm_layers + 1:
             raise ValueError(
                 f'Wrong bias_l1_regularizer array size, should be {self.network.n_hidden_lstm_layers + 1}')
-        if len(self.network.recurrent_l1_regularizer) != self.network.n_hidden_lstm_layers + 1:
+        if size(self.network.recurrent_l1_regularizer) != self.network.n_hidden_lstm_layers + 1:
             raise ValueError(
                 f'Wrong recurrent_l1_regularizer array size, should be {self.network.n_hidden_lstm_layers + 1}')
-        if len(self.network.activity_l1_regularizer) != self.network.n_hidden_lstm_layers + 1:
+        if size(self.network.activity_l1_regularizer) != self.network.n_hidden_lstm_layers + 1:
             raise ValueError(
                 f'Wrong activity_l1_regularizer array size, should be {self.network.n_hidden_lstm_layers + 1}')
-        if len(self.network.kernel_l2_regularizer) != self.network.n_hidden_lstm_layers + 1:
+        if size(self.network.kernel_l2_regularizer) != self.network.n_hidden_lstm_layers + 1:
             raise ValueError(
                 f'Wrong kernel_l2_regularizer array size, should be {self.network.n_hidden_lstm_layers + 1}')
-        if len(self.network.bias_l2_regularizer) != self.network.n_hidden_lstm_layers + 1:
+        if size(self.network.bias_l2_regularizer) != self.network.n_hidden_lstm_layers + 1:
             raise ValueError(
                 f'Wrong bias_l2_regularizer array size, should be {self.network.n_hidden_lstm_layers + 1}')
-        if len(self.network.recurrent_l2_regularizer) != self.network.n_hidden_lstm_layers + 1:
+        if size(self.network.recurrent_l2_regularizer) != self.network.n_hidden_lstm_layers + 1:
             raise ValueError(
                 f'Wrong recurrent_l2_regularizer array size, should be {self.network.n_hidden_lstm_layers + 1}')
-        if len(self.network.activity_l2_regularizer) != self.network.n_hidden_lstm_layers + 1:
+        if size(self.network.activity_l2_regularizer) != self.network.n_hidden_lstm_layers + 1:
             raise ValueError(
                 f'Wrong activity_l2_regularizer array size, should be {self.network.n_hidden_lstm_layers + 1}')
 
-        for i in range(len(self.network.activation_funcs)):
+        for i in range(size(self.network.activation_funcs)):
             if type(self.network.activation_funcs[i]) in getNumericTypes():
                 self.network.activation_funcs[i] = ActivationFunc(self.network.activation_funcs[i])
-        for i in range(len(self.network.rec_activation_funcs)):
+        for i in range(size(self.network.rec_activation_funcs)):
             if type(self.network.rec_activation_funcs[i]) in getNumericTypes():
                 self.network.rec_activation_funcs[i] = ActivationFunc(self.network.rec_activation_funcs[i])
 
@@ -536,7 +536,7 @@ class Hyperparameters(object):
 
         if self.network.stateful and self.network.batch_size == 0:
             self.network.batch_size = 1  # batch size must be one for stateful
-        if len(self.network.layer_sizes) == self.network.n_hidden_lstm_layers:
+        if size(self.network.layer_sizes) == self.network.n_hidden_lstm_layers:
             self.network.layer_sizes.insert(0, self.network.backward_samples)
 
     def validate(self) -> None:

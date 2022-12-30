@@ -8,6 +8,8 @@ import numpy as np
 from sklearn import metrics as sk_metrics
 from sklearn.exceptions import UndefinedMetricWarning
 
+from utils_misc import size
+
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # DISABLE TENSORFLOW WARNING
 import tensorflow as tf
 
@@ -84,7 +86,7 @@ def getAllCustomMetrics() -> dict:
     return custom_dict
 
 
-def getRegressionMetrics(get_names_only: bool = False) -> list[Union[str, Callable]]:
+def getKerasRegressionMetrics(get_names_only: bool = False) -> list[Union[str, Callable]]:
     metrics = [
         Metric.R2,
         Metric.MSE,
@@ -103,35 +105,35 @@ def getRegressionMetrics(get_names_only: bool = False) -> list[Union[str, Callab
 
 
 def manualMeanAbsoluteError(predictions: list[Optional[float]], labels: list[Optional[float]]) -> float:
-    if len(predictions) != len(labels):
+    if size(predictions) != size(labels):
         raise AttributeError('Predictions and labels must have the same size')
     mae_sum = 0
     for predict, label in zip(predictions, labels):
         error = label - predict
         mae_sum += abs(error)
-    mae = mae_sum / len(labels)
+    mae = mae_sum / size(labels)
     return mae
 
 
 def manualMeanAbsolutePercentageError(predictions: list[Optional[float]], labels: list[Optional[float]]) -> float:
-    if len(predictions) != len(labels):
+    if size(predictions) != size(labels):
         raise AttributeError('Predictions and labels must have the same size')
     mape_sum = 0
     for predict, label in zip(predictions, labels):
         error = label - predict
         mape_sum += abs(error) / max(EPSILON, abs(label))
-    mape = mape_sum / len(labels)
+    mape = mape_sum / size(labels)
     return mape
 
 
 def manualMeanSquaredError(predictions: list[Optional[float]], labels: list[Optional[float]]) -> float:
-    if len(predictions) != len(labels):
+    if size(predictions) != size(labels):
         raise AttributeError('Predictions and labels must have the same size')
     mse_sum = 0
     for predict, label in zip(predictions, labels):
         error = label - predict
         mse_sum += error ** 2
-    mse = mse_sum / len(labels)
+    mse = mse_sum / size(labels)
     return mse
 
 
@@ -142,7 +144,7 @@ def manualRootMeanSquaredError(predictions: list[Optional[float]], labels: list[
 
 
 def manualR2(predictions: list[Optional[float]], labels: list[Optional[float]], clip: bool = True) -> float:
-    if len(predictions) != len(labels):
+    if size(predictions) != size(labels):
         raise AttributeError('Predictions and labels must have the same size')
     rss = 0
     label_mean = 0
@@ -150,7 +152,7 @@ def manualR2(predictions: list[Optional[float]], labels: list[Optional[float]], 
         error = label - predict
         rss += error ** 2
         label_mean += label
-    label_mean = label_mean / len(labels)
+    label_mean = label_mean / size(labels)
     tss = 0
     for label in labels:
         distance = label - label_mean
@@ -163,7 +165,7 @@ def manualR2(predictions: list[Optional[float]], labels: list[Optional[float]], 
 
 def manualCosineSimilarity(predictions: list[Optional[float]], labels: list[Optional[float]],
                            clip: bool = True) -> float:
-    if len(predictions) != len(labels):
+    if size(predictions) != size(labels):
         raise AttributeError('Predictions and labels must have the same size')
     dot_product = 0
     norm_predictions = 0
@@ -197,7 +199,7 @@ def computeAllManualRegressionMetrics(predictions: list[Optional[float]], labels
     if DROP_NAN_BEFORE_COMPUTE_METRICS:
         predictions, labels = dropNanValuesSimultaneously(predictions, labels)
 
-    if len(predictions) > 0 and len(labels) > 0:
+    if size(predictions) > 0 and size(labels) > 0:
         mae = manualMeanAbsoluteError(predictions, labels)
         mape = manualMeanAbsolutePercentageError(predictions, labels)
         mse = manualMeanSquaredError(predictions, labels)
@@ -230,7 +232,7 @@ def computeAllManualBinaryMetrics(predictions: list[int], labels: list[int], lab
     if DROP_NAN_BEFORE_COMPUTE_METRICS:
         predictions, labels = dropNanValuesSimultaneously(predictions, labels)
     warnings.filterwarnings("error")
-    if len(predictions) > 0 and len(labels) > 0:
+    if size(predictions) > 0 and size(labels) > 0:
         try:
             false_pos, true_pos, roc_thresholds = sk_metrics.roc_curve(labels, predictions)
             false_pos = false_pos.tolist()

@@ -133,14 +133,14 @@ def _line(plot_data: Union[list, np.ndarray], plot_args: dict) -> bool:
     if 'style' in plot_args:
         style = plot_args.pop('style')
         plot_data.append(style)
-    if len(plot_data) > 0 and size(plot_data[0]) > 0:
+    if size(plot_data) > 0 and size(plot_data[0]) > 0:
         plt.plot(*plot_data, **plot_args)
         return True
     return False
 
 
 def _scatter(plot_data: Union[list, np.ndarray], plot_args: dict) -> bool:
-    if len(plot_data) > 0 and size(plot_data[0]) > 0:
+    if size(plot_data) > 0 and size(plot_data[0]) > 0:
         plt.scatter(*plot_data, **plot_args)
         return True
     return False
@@ -156,7 +156,7 @@ def _imshow(plot_data: Union[list, np.ndarray], plot_args: dict) -> bool:
             fmin, fmax = plot_args.pop('auto_range_factors')
             plot_args['vmin'] *= fmin
             plot_args['vmax'] *= fmax
-    if len(plot_data) > 0 and size(plot_data[0]) > 0:
+    if size(plot_data) > 0 and size(plot_data[0]) > 0:
         plt.imshow(*plot_data, **plot_args)
         return True
     return False

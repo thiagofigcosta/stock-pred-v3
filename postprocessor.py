@@ -8,39 +8,39 @@ import numpy as np
 from metrics import computeAllManualRegressionMetrics, computeAllManualBinaryMetrics
 from preprocessor import DatasetSplit
 from utils_date import timestampToDateObj, timestampToDateStr, SAVE_DATE_FORMAT, getNextWorkDays, dateObjToTimestamp
-from utils_misc import weightedAverage
+from utils_misc import weightedAverage, size
 from utils_random import randInt
 
 
 class AuxiliaryCache(object):
-    _sequential_values_cache = None
-    _r_sequential_values_cache = None
-    _exp_sequential_values_cache = None
-    _exp_r_sequential_values_cache = None
+    _sequential_values = None
+    _reverse_sequential_values = None
+    _exp_sequential_values = None
+    _exp_reverse_sequential_values = None
 
     @staticmethod
     def getSeqVals():
-        if AuxiliaryCache._sequential_values_cache is None:
-            AuxiliaryCache._sequential_values_cache = {}
-        return AuxiliaryCache._sequential_values_cache
+        if AuxiliaryCache._sequential_values is None:
+            AuxiliaryCache._sequential_values = {}
+        return AuxiliaryCache._sequential_values
 
     @staticmethod
     def getRSeqVals():
-        if AuxiliaryCache._r_sequential_values_cache is None:
-            AuxiliaryCache._r_sequential_values_cache = {}
-        return AuxiliaryCache._r_sequential_values_cache
+        if AuxiliaryCache._reverse_sequential_values is None:
+            AuxiliaryCache._reverse_sequential_values = {}
+        return AuxiliaryCache._reverse_sequential_values
 
     @staticmethod
     def getExpSeqVals():
-        if AuxiliaryCache._exp_sequential_values_cache is None:
-            AuxiliaryCache._exp_sequential_values_cache = {}
-        return AuxiliaryCache._exp_sequential_values_cache
+        if AuxiliaryCache._exp_sequential_values is None:
+            AuxiliaryCache._exp_sequential_values = {}
+        return AuxiliaryCache._exp_sequential_values
 
     @staticmethod
     def getRExpSeqVals():
-        if AuxiliaryCache._exp_r_sequential_values_cache is None:
-            AuxiliaryCache._exp_r_sequential_values_cache = {}
-        return AuxiliaryCache._exp_r_sequential_values_cache
+        if AuxiliaryCache._exp_reverse_sequential_values is None:
+            AuxiliaryCache._exp_reverse_sequential_values = {}
+        return AuxiliaryCache._exp_reverse_sequential_values
 
 
 def syncPredictionsAndLabelsSize(predictions: Union[list[Optional[float]], list[tuple]],
@@ -51,8 +51,8 @@ def syncPredictionsAndLabelsSize(predictions: Union[list[Optional[float]], list[
         _, labels = list(zip(*labels))
     predictions = list(filter(lambda x: x is not None, predictions))
     labels = list(filter(lambda x: x is not None, labels))
-    future = predictions[len(labels):]
-    predictions = predictions[:len(labels)]
+    future = predictions[size(labels):]
+    predictions = predictions[:size(labels)]
     return predictions, labels, future
 
 
@@ -74,8 +74,8 @@ def matchValueWithDate(values: list[Optional[float]], source: DatasetSplit, inde
                 matched.append((date, price))
             else:
                 future_data.append(price)
-    if len(future_data) > 0:
-        future_dates = getNextWorkDays(timestampToDateObj(last_date), len(future_data))
+    if size(future_data) > 0:
+        future_dates = getNextWorkDays(timestampToDateObj(last_date), size(future_data))
         for date, price in zip(future_dates, future_data):
             if not date_obj_out:
                 date = dateObjToTimestamp(date)
@@ -91,7 +91,7 @@ def getFutureDates(future: list[Optional[float]], past_size: int, index_tracker:
         raise ValueError('Wrong past size value!')
     index = index_tracker.get((DatasetSplit.TEST, past_size - 1), None)
     last_date = dates_mapper[index]
-    future_dates = getNextWorkDays(timestampToDateObj(last_date), len(future))
+    future_dates = getNextWorkDays(timestampToDateObj(last_date), size(future))
     dates = []
     for date in future_dates:
         if not date_obj_out:
@@ -223,7 +223,7 @@ def _aggMean(predictions: Optional[list[Optional[list]]]) -> list[Optional[float
     for values in predictions:
         if values is None:
             aggregated.append(values)
-        elif len(values) == 1:
+        elif size(values) == 1:
             aggregated.append(values[0])
         else:
             aggregated.append(statistics.mean(values))
@@ -235,10 +235,8 @@ def _aggMedian(predictions: Optional[list[Optional[list]]]) -> list[Optional[flo
     for values in predictions:
         if values is None:
             aggregated.append(values)
-        elif len(values) == 1:
+        elif size(values) == 1:
             aggregated.append(values[0])
-        elif len(values) == 2:
-            aggregated.append(statistics.mean(values))
         else:
             aggregated.append(statistics.median(values))
     return aggregated
@@ -249,7 +247,7 @@ def _aggFLMean(predictions: Optional[list[Optional[list]]]) -> list[Optional[flo
     for values in predictions:
         if values is None:
             aggregated.append(values)
-        elif len(values) == 1:
+        elif size(values) == 1:
             aggregated.append(values[0])
         else:
             aggregated.append(statistics.mean([values[0], values[-1]]))
@@ -261,10 +259,8 @@ def _aggFLMedian(predictions: Optional[list[Optional[list]]]) -> list[Optional[f
     for values in predictions:
         if values is None:
             aggregated.append(values)
-        elif len(values) == 1:
+        elif size(values) == 1:
             aggregated.append(values[0])
-        elif len(values) == 2:
-            aggregated.append(statistics.mean(values))
         else:
             aggregated.append(statistics.median([values[0], values[-1]]))
     return aggregated
@@ -277,18 +273,6 @@ def getSeqWeights(n: int) -> list[int]:
     return seq_vals[n]
 
 
-def _aggFWAverage(predictions: Optional[list[Optional[list]]]) -> list[Optional[float]]:
-    aggregated = []
-    for values in predictions:
-        if values is None:
-            aggregated.append(values)
-        elif len(values) == 1:
-            aggregated.append(values[0])
-        else:
-            aggregated.append(weightedAverage(values, getRSeqWeights(len(values))))
-    return aggregated
-
-
 def getRSeqWeights(n: int) -> list[int]:
     r_seq_vals = AuxiliaryCache.getRSeqVals()
     if n not in r_seq_vals:
@@ -296,15 +280,27 @@ def getRSeqWeights(n: int) -> list[int]:
     return r_seq_vals[n]
 
 
+def _aggFWAverage(predictions: Optional[list[Optional[list]]]) -> list[Optional[float]]:
+    aggregated = []
+    for values in predictions:
+        if values is None:
+            aggregated.append(values)
+        elif size(values) == 1:
+            aggregated.append(values[0])
+        else:
+            aggregated.append(weightedAverage(values, getRSeqWeights(size(values))))
+    return aggregated
+
+
 def _aggLWAverage(predictions: Optional[list[Optional[list]]]) -> list[Optional[float]]:
     aggregated = []
     for values in predictions:
         if values is None:
             aggregated.append(values)
-        elif len(values) == 1:
+        elif size(values) == 1:
             aggregated.append(values[0])
         else:
-            aggregated.append(weightedAverage(values, getSeqWeights(len(values))))
+            aggregated.append(weightedAverage(values, getSeqWeights(size(values))))
     return aggregated
 
 
@@ -315,18 +311,6 @@ def getExpSeqWeights(n: int) -> list[int]:
     return exp_seq_vals[n]
 
 
-def _aggExpFWAverage(predictions: Optional[list[Optional[list]]]) -> list[Optional[float]]:
-    aggregated = []
-    for values in predictions:
-        if values is None:
-            aggregated.append(values)
-        elif len(values) == 1:
-            aggregated.append(values[0])
-        else:
-            aggregated.append(weightedAverage(values, getExpRSeqWeights(len(values))))
-    return aggregated
-
-
 def getExpRSeqWeights(n: int) -> list[int]:
     r_exp_seq_vals = AuxiliaryCache.getRExpSeqVals()
     if n not in r_exp_seq_vals:
@@ -334,218 +318,151 @@ def getExpRSeqWeights(n: int) -> list[int]:
     return r_exp_seq_vals[n]
 
 
+def _aggExpFWAverage(predictions: Optional[list[Optional[list]]]) -> list[Optional[float]]:
+    aggregated = []
+    for values in predictions:
+        if values is None:
+            aggregated.append(values)
+        elif size(values) == 1:
+            aggregated.append(values[0])
+        else:
+            aggregated.append(weightedAverage(values, getExpRSeqWeights(size(values))))
+    return aggregated
+
+
 def _aggExpLWAverage(predictions: Optional[list[Optional[list]]]) -> list[Optional[float]]:
     aggregated = []
     for values in predictions:
         if values is None:
             aggregated.append(values)
-        elif len(values) == 1:
+        elif size(values) == 1:
             aggregated.append(values[0])
         else:
-            aggregated.append(weightedAverage(values, getExpSeqWeights(len(values))))
+            aggregated.append(weightedAverage(values, getExpSeqWeights(size(values))))
     return aggregated
 
 
-def _aggVotingMean(predictions: Optional[list[Optional[list]]]) -> list[Optional[float]]:
+def democraticElections(values: Union[list, np.ndarray],
+                        previous_val: Optional[float] = None) -> Union[list, np.ndarray]:
+    if size(values) <= 2 or previous_val is None:
+        return values
+    else:
+        up_values = []
+        down_values = []
+        up_down_values = [up_values, down_values]
+        for value in values:
+            if value > previous_val:
+                up_values.append(value)
+            elif value < previous_val:
+                down_values.append(value)
+            else:
+                up_down_values[randInt(1)].append(value)
+        if size(up_values) > size(down_values):
+            return up_values
+        elif size(up_values) < size(down_values):
+            return down_values
+        else:
+            return up_down_values[randInt(1)]
+
+
+def _aggVotingMean(predictions: Optional[list[Optional[list]]],
+                   previous_val: Optional[float] = None) -> list[Optional[float]]:
     aggregated = []
-    last_value = None
     for values in predictions:
         if values is None:
             aggregated.append(values)
         else:
-            if len(values) == 1:
-                aggregated.append(values[0])
-            elif len(values) == 2:
-                aggregated.append(statistics.mean(values))
+            elected = democraticElections(values, previous_val)
+            if size(elected) == 1:
+                aggregated.append(elected[0])
             else:
-                up_values = []
-                down_values = []
-                up_down_values = [up_values, down_values]
-                for value in values:
-                    if value > last_value:
-                        up_values.append(value)
-                    elif value < last_value:
-                        down_values.append(value)
-                    else:
-                        up_down_values[randInt(1)].append(value)
-                if len(up_values) > len(down_values):
-                    voted = up_values
-                elif len(up_values) < len(down_values):
-                    voted = down_values
-                else:
-                    voted = up_down_values[randInt(1)]
-                aggregated.append(statistics.mean(voted))
-            last_value = aggregated[-1]
+                aggregated.append(statistics.mean(elected))
+            previous_val = aggregated[-1]
     return aggregated
 
 
-def _aggVotingMedian(predictions: Optional[list[Optional[list]]]) -> list[Optional[float]]:
+def _aggVotingMedian(predictions: Optional[list[Optional[list]]],
+                     previous_val: Optional[float] = None) -> list[Optional[float]]:
     aggregated = []
-    last_value = None
     for values in predictions:
         if values is None:
             aggregated.append(values)
         else:
-            if len(values) == 1:
-                aggregated.append(values[0])
-            elif len(values) == 2:
-                aggregated.append(statistics.mean(values))
+            elected = democraticElections(values, previous_val)
+            if size(elected) == 1:
+                aggregated.append(elected[0])
             else:
-                up_values = []
-                down_values = []
-                up_down_values = [up_values, down_values]
-                for value in values:
-                    if value > last_value:
-                        up_values.append(value)
-                    elif value < last_value:
-                        down_values.append(value)
-                    else:
-                        up_down_values[randInt(1)].append(value)
-                if len(up_values) > len(down_values):
-                    voted = up_values
-                elif len(up_values) < len(down_values):
-                    voted = down_values
-                else:
-                    voted = up_down_values[randInt(1)]
-                aggregated.append(statistics.median(voted))
-            last_value = aggregated[-1]
+                aggregated.append(statistics.median(elected))
+            previous_val = aggregated[-1]
     return aggregated
 
 
-def _aggVotingFWAverage(predictions: Optional[list[Optional[list]]]) -> list[Optional[float]]:
+def _aggVotingFWAverage(predictions: Optional[list[Optional[list]]],
+                        previous_val: Optional[float] = None) -> list[Optional[float]]:
     aggregated = []
-    last_value = None
     for values in predictions:
         if values is None:
             aggregated.append(values)
         else:
-            if len(values) == 1:
-                aggregated.append(values[0])
-            elif len(values) == 2:
-                aggregated.append(statistics.mean(values))
+            elected = democraticElections(values, previous_val)
+            if size(elected) == 1:
+                aggregated.append(elected[0])
             else:
-                up_values = []
-                down_values = []
-                up_down_values = [up_values, down_values]
-                for value in values:
-                    if value > last_value:
-                        up_values.append(value)
-                    elif value < last_value:
-                        down_values.append(value)
-                    else:
-                        up_down_values[randInt(1)].append(value)
-                if len(up_values) > len(down_values):
-                    voted = up_values
-                elif len(up_values) < len(down_values):
-                    voted = down_values
-                else:
-                    voted = up_down_values[randInt(1)]
-                aggregated.append(weightedAverage(voted, getRSeqWeights(len(voted))))
-            last_value = aggregated[-1]
+                aggregated.append(weightedAverage(elected, getRSeqWeights(size(elected))))
+            previous_val = aggregated[-1]
     return aggregated
 
 
-def _aggVotingLWAverage(predictions: Optional[list[Optional[list]]]) -> list[Optional[float]]:
+def _aggVotingLWAverage(predictions: Optional[list[Optional[list]]],
+                        previous_val: Optional[float] = None) -> list[Optional[float]]:
     aggregated = []
-    last_value = None
     for values in predictions:
         if values is None:
             aggregated.append(values)
         else:
-            if len(values) == 1:
-                aggregated.append(values[0])
-            elif len(values) == 2:
-                aggregated.append(statistics.mean(values))
+            elected = democraticElections(values, previous_val)
+            if size(elected) == 1:
+                aggregated.append(elected[0])
             else:
-                up_values = []
-                down_values = []
-                up_down_values = [up_values, down_values]
-                for value in values:
-                    if value > last_value:
-                        up_values.append(value)
-                    elif value < last_value:
-                        down_values.append(value)
-                    else:
-                        up_down_values[randInt(1)].append(value)
-                if len(up_values) > len(down_values):
-                    voted = up_values
-                elif len(up_values) < len(down_values):
-                    voted = down_values
-                else:
-                    voted = up_down_values[randInt(1)]
-                aggregated.append(weightedAverage(voted, getSeqWeights(len(voted))))
-            last_value = aggregated[-1]
+                aggregated.append(weightedAverage(elected, getSeqWeights(size(elected))))
+            previous_val = aggregated[-1]
     return aggregated
 
 
-def _aggVotingExpFWAverage(predictions: Optional[list[Optional[list]]]) -> list[Optional[float]]:
+def _aggVotingExpFWAverage(predictions: Optional[list[Optional[list]]],
+                           previous_val: Optional[float] = None) -> list[Optional[float]]:
     aggregated = []
-    last_value = None
     for values in predictions:
         if values is None:
             aggregated.append(values)
         else:
-            if len(values) == 1:
-                aggregated.append(values[0])
-            elif len(values) == 2:
-                aggregated.append(statistics.mean(values))
+            elected = democraticElections(values, previous_val)
+            if size(elected) == 1:
+                aggregated.append(elected[0])
             else:
-                up_values = []
-                down_values = []
-                up_down_values = [up_values, down_values]
-                for value in values:
-                    if value > last_value:
-                        up_values.append(value)
-                    elif value < last_value:
-                        down_values.append(value)
-                    else:
-                        up_down_values[randInt(1)].append(value)
-                if len(up_values) > len(down_values):
-                    voted = up_values
-                elif len(up_values) < len(down_values):
-                    voted = down_values
-                else:
-                    voted = up_down_values[randInt(1)]
-                aggregated.append(weightedAverage(voted, getExpRSeqWeights(len(voted))))
-            last_value = aggregated[-1]
+                aggregated.append(weightedAverage(elected, getExpRSeqWeights(size(elected))))
+            previous_val = aggregated[-1]
     return aggregated
 
 
-def _aggVotingExpLWAverage(predictions: Optional[list[Optional[list]]]) -> list[Optional[float]]:
+def _aggVotingExpLWAverage(predictions: Optional[list[Optional[list]]],
+                           previous_val: Optional[float] = None) -> list[Optional[float]]:
     aggregated = []
-    last_value = None
     for values in predictions:
         if values is None:
             aggregated.append(values)
         else:
-            if len(values) == 1:
-                aggregated.append(values[0])
-            elif len(values) == 2:
-                aggregated.append(statistics.mean(values))
+            elected = democraticElections(values, previous_val)
+            if size(elected) == 1:
+                aggregated.append(elected[0])
             else:
-                up_values = []
-                down_values = []
-                up_down_values = [up_values, down_values]
-                for value in values:
-                    if value > last_value:
-                        up_values.append(value)
-                    elif value < last_value:
-                        down_values.append(value)
-                    else:
-                        up_down_values[randInt(1)].append(value)
-                if len(up_values) > len(down_values):
-                    voted = up_values
-                elif len(up_values) < len(down_values):
-                    voted = down_values
-                else:
-                    voted = up_down_values[randInt(1)]
-                aggregated.append(weightedAverage(voted, getExpSeqWeights(len(voted))))
-            last_value = aggregated[-1]
+                aggregated.append(weightedAverage(elected, getExpSeqWeights(size(elected))))
+            previous_val = aggregated[-1]
     return aggregated
 
 
-def aggregateDecodedPredictions(predictions: Optional[list[Optional[list]]],
-                                method: AggregationMethod) -> list[Optional[float]]:
+def aggregateDecodedPredictions(predictions: Optional[list[Optional[list]]], method: AggregationMethod,
+                                previous_val: Optional[float] = None) -> list[Optional[float]]:
     if method == AggregationMethod.FIRST:
         return _aggFirst(predictions)
     elif method == AggregationMethod.LAST:
@@ -569,32 +486,35 @@ def aggregateDecodedPredictions(predictions: Optional[list[Optional[list]]],
     elif method == AggregationMethod.VOTING_MEAN:
         return _aggVotingMean(predictions)
     elif method == AggregationMethod.VOTING_MEDIAN:
-        return _aggVotingMedian(predictions)
+        return _aggVotingMedian(predictions, previous_val)
     elif method == AggregationMethod.VOTING_F_WEIGHTED_AVERAGE:
-        return _aggVotingFWAverage(predictions)
+        return _aggVotingFWAverage(predictions, previous_val)
     elif method == AggregationMethod.VOTING_L_WEIGHTED_AVERAGE:
-        return _aggVotingLWAverage(predictions)
+        return _aggVotingLWAverage(predictions, previous_val)
     elif method == AggregationMethod.VOTING_EXP_F_WEIGHTED_AVERAGE:
-        return _aggVotingExpFWAverage(predictions)
+        return _aggVotingExpFWAverage(predictions, previous_val)
     elif method == AggregationMethod.VOTING_EXP_L_WEIGHTED_AVERAGE:
-        return _aggVotingExpLWAverage(predictions)
+        return _aggVotingExpLWAverage(predictions, previous_val)
     else:
         raise ValueError(f'Unknown method {method}')
 
 
-def aggregateDecodedPredictionsAllMethods(predictions: Optional[list[Optional[list]]]) -> dict:
+def aggregateDecodedPredictionsAllMethods(predictions: Optional[list[Optional[list]]],
+                                          previous_val: Optional[float] = None) -> dict:
     out = {}
     for method in AggregationMethod.getAll():
-        out[str(method)] = aggregateDecodedPredictions(predictions, method)
+        out[str(method)] = aggregateDecodedPredictions(predictions, method, previous_val)
     return out
 
 
-def aggregateAllDecodedPredictionsAllMethods(predictions: dict) -> dict:
+def aggregateAllDecodedPredictionsAllMethods(predictions: dict, previous_vals: Optional[dict] = None) -> dict:
     out = {}
+    if previous_vals is None:
+        previous_vals = {}
     for d_type, data in predictions.items():
         decoded = {}
         for method in AggregationMethod.getAll():
-            decoded[str(method)] = aggregateDecodedPredictions(data, method)
+            decoded[str(method)] = aggregateDecodedPredictions(data, method, previous_vals.get(d_type, None))
         out[d_type] = decoded
     return out
 
@@ -602,7 +522,7 @@ def aggregateAllDecodedPredictionsAllMethods(predictions: dict) -> dict:
 def castRegressionToDelta(array: list[Union[np.float32, float]],
                           previous_value: Union[np.float32, float]) -> list[Union[np.float32, float]]:
     deltas = []
-    for i in range(len(array)):
+    for i in range(size(array)):
         deltas.append(array[i] - previous_value)
         previous_value = array[i]
     return deltas
@@ -619,7 +539,7 @@ def computeMetricsAndGetValues(predictions: Union[dict, Optional[list[Optional[l
     all_metrics_and_values = {}
     if type(predictions) is not dict:
         predictions = {'predictions': predictions}
-    all_predictions_all_agg = aggregateAllDecodedPredictionsAllMethods(predictions)
+    all_predictions_all_agg = aggregateAllDecodedPredictionsAllMethods(predictions, prev_labels)
     for d_type, predictions_all_agg in all_predictions_all_agg.items():
         metrics_and_values = {}
         label = labels[d_type]
@@ -644,13 +564,13 @@ def computeMetricsAndGetValues(predictions: Union[dict, Optional[list[Optional[l
                     'binary': b_metrics
                 }
             }
-            if len(future) > 0:
+            if size(future) > 0:
                 metrics_and_values['predictions'][agg_method]['future'] = {
                     'vals': future,
-                    'dates': getFutureDates(future, len(label), index_tracker, dates_mapper, date_obj_out=True)
+                    'dates': getFutureDates(future, size(label), index_tracker, dates_mapper, date_obj_out=True)
                 }
         all_metrics_and_values[d_type] = metrics_and_values
-    # if len(all_metrics_and_values) == 1:
+    # if size(all_metrics_and_values) == 1:
     #     return list(all_metrics_and_values.values())[0]
     # else:
     return all_metrics_and_values

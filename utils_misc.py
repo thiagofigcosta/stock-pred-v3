@@ -171,7 +171,7 @@ def safeMean(array: list[float]) -> Optional[float]:
 
 
 def weightedAverage(values: list[float], weights: list[float]) -> float:
-    if len(values) != len(weights):
+    if size(values) != size(weights):
         raise AttributeError('Error, mismatching size between values and weights!')
     w_sum = sum(weights)
     v_sum = 0
@@ -211,9 +211,9 @@ def getCpuCount() -> int:
     return os.cpu_count()
 
 
-def binarySearch(lis: list, el: Any) -> Any:  # list must be sorted
+def binarySearch(lis: Union[list, np.ndarray], el: Any) -> Any:  # list must be sorted
     low = 0
-    high = len(lis) - 1
+    high = size(lis) - 1
     ret = None
     while low <= high:
         mid = (low + high) // 2

@@ -6,7 +6,7 @@ import numpy as np
 
 from hyperparameters import Hyperparameters
 from logger import verbose, error, info, clean, getVerbose
-from metrics import getRegressionMetrics, getAllCustomMetrics, EPSILON
+from metrics import getKerasRegressionMetrics, getAllCustomMetrics, EPSILON
 from plotter import FIGURE_DPI, plot, getPlotColorFromIndex, getColorGradientsFromIndex
 from postprocessor import decodeWindowedPredictions, decodeWindowedLabels, computeMetricsAndGetValues, AggregationMethod
 from preprocessor import ProcessedDataset, DatasetSplit
@@ -276,7 +276,7 @@ class Prophet(object):
         if len(data_to_evaluate) == 0:
             raise AttributeError('No data found to be evaluated.')
 
-        metrics_names = ['loss'] + getRegressionMetrics(get_names_only=True)
+        metrics_names = ['loss'] + getKerasRegressionMetrics(get_names_only=True)
         results = {}
         for d_type, data in data_to_evaluate.items():
             keras_metrics = self.model.evaluate(data[0], data[1], batch_size=self.configs.network.batch_size,
@@ -810,7 +810,7 @@ class Prophet(object):
         else:
             raise ValueError(f'Unknown optimizer {configs.network.optimizer}')
         model.compile(loss=configs.network.loss.toKerasName(), optimizer=opt,
-                      metrics=getRegressionMetrics())
+                      metrics=getKerasRegressionMetrics())
 
         callbacks = Prophet._genCallbacks(configs, basename, path_subdir=path_subdir, do_verbose=do_verbose)
         prophet = Prophet(basename, model, callbacks, configs, do_verbose=do_verbose, path_subdir=path_subdir,
