@@ -126,6 +126,49 @@ def manualMeanAbsolutePercentageError(predictions: list[Optional[float]], labels
     return mape
 
 
+def manualSimetricMeanAbsolutePercentageError(predictions: list[Optional[float]],
+                                              labels: list[Optional[float]]) -> float:
+    if size(predictions) != size(labels):
+        raise AttributeError('Predictions and labels must have the same size')
+    smape_sum = 0
+    for predict, label in zip(predictions, labels):
+        error = label - predict
+        smape_sum += abs(error) / ((abs(predict) + abs(label)) / 2)
+    smape = smape_sum / size(labels)
+    return smape
+
+
+def manualMeanArctangentAbsolutePercentageError(predictions: list[Optional[float]],
+                                                labels: list[Optional[float]]) -> float:
+    if size(predictions) != size(labels):
+        raise AttributeError('Predictions and labels must have the same size')
+    maape_sum = 0
+    for predict, label in zip(predictions, labels):
+        error = label - predict
+        maape_sum += math.atan(error / max(EPSILON, label))
+    maape = maape_sum / size(labels)
+    return maape
+
+
+def manualMeanDirectionalAccuracyPercentageError(predictions: list[Optional[float]],
+                                                 labels: list[Optional[float]]) -> float:
+    if size(predictions) != size(labels):
+        raise AttributeError('Predictions and labels must have the same size')
+    mda_sum = 0
+    prev_label = 0
+    prev_predict = 0
+    for i, (predict, label) in enumerate(zip(predictions, labels)):
+        if i > 0:
+            to_sum = 0
+            if math.sin(label - prev_label) == math.sin(predict - prev_predict):
+                to_sum = 1
+            mda_sum += to_sum
+        prev_predict = predict
+        prev_label = label
+    mda = mda_sum / size(labels)
+    return mda
+
+
 def manualMeanSquaredError(predictions: list[Optional[float]], labels: list[Optional[float]]) -> float:
     if size(predictions) != size(labels):
         raise AttributeError('Predictions and labels must have the same size')
@@ -199,6 +242,15 @@ def computeAllManualRegressionMetrics(predictions: list[Optional[float]], labels
     if DROP_NAN_BEFORE_COMPUTE_METRICS:
         predictions, labels = dropNanValuesSimultaneously(predictions, labels)
 
+    mae = float('inf')
+    mape = float('inf')
+    mse = float('inf')
+    rmse = float('inf')
+    r2 = float('-inf')
+    cos_sim = float('-inf')
+    smape = float('inf')
+    maape = float('inf')
+    mda = float('-inf')
     if size(predictions) > 0 and size(labels) > 0:
         mae = manualMeanAbsoluteError(predictions, labels)
         mape = manualMeanAbsolutePercentageError(predictions, labels)
@@ -206,13 +258,18 @@ def computeAllManualRegressionMetrics(predictions: list[Optional[float]], labels
         rmse = manualRootMeanSquaredError(predictions, labels)
         r2 = manualR2(predictions, labels)
         cos_sim = manualCosineSimilarity(predictions, labels)
-    else:
-        mae = float('inf')
-        mape = float('inf')
-        mse = float('inf')
-        rmse = float('inf')
-        r2 = float('-inf')
-        cos_sim = float('-inf')
+        try:
+            smape = manualSimetricMeanAbsolutePercentageError(predictions, labels)
+        except:
+            pass
+        try:
+            maape = manualMeanArctangentAbsolutePercentageError(predictions, labels)
+        except:
+            pass
+        try:
+            mda = manualMeanDirectionalAccuracyPercentageError(predictions, labels)
+        except:
+            pass
 
     label = f'_{label}' if label is not None else ''
     prefix = f'_{prefix}' if prefix is not None else ''
@@ -221,7 +278,11 @@ def computeAllManualRegressionMetrics(predictions: list[Optional[float]], labels
                prefix + 'mse' + label: mse,
                prefix + 'rmse' + label: rmse,
                prefix + 'r2' + label: r2,
-               prefix + 'cos_sim' + label: cos_sim}
+               prefix + 'cos_sim' + label: cos_sim,
+               prefix + 'smape' + label: smape,
+               prefix + 'maape' + label: maape,
+               prefix + 'mda' + label: mda,
+               }
     return metrics
 
 
