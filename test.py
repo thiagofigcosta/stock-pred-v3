@@ -1,5 +1,6 @@
 import numpy as np
 
+import logger
 from crawler import downloadTicker
 from enricher import enrich
 from hyperparameters import Hyperparameters
@@ -76,15 +77,15 @@ x = aggregateDecodedPredictions(x, AggregationMethod.FIRST)
 print(f'Aggregated predictions: {x}')
 print()
 
-configure(name='stock-pred-v3-test', level=True)
+configure(name='stock-pred-v3-test', level=logger.Level.VERBOSE)
 
 ticker = 'goog'
-start_date = '01/01/2010'
+start_date = '01/01/2016'
 end_date = '01/12/2022'
 recreate_dataset = False
 force_retrain = False
-prophet_to_load_path = 'prophets/lstm_model-0-6d3dfbc24dab5d725134630202b6c6e9eb5fa809dd2287a9878915e324c0d3da.json'
-max_epochs = None
+prophet_to_load_path = 'prophets/lstm_model-0-40f58875c9974ee91338f0395f9642b5dde8ac73bb626b4f45e27f65c66f982e.json'
+max_epochs = 10
 
 dataset_filepath = downloadTicker(ticker, start_date, end_date, force=recreate_dataset)
 dataset_filepath = enrich(dataset_filepath, force=recreate_dataset)
