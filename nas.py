@@ -17,6 +17,7 @@ from pymoo.core.result import Result
 from pymoo.core.variable import Integer, Real, Binary, Choice
 from pymoo.factory import get_reference_directions
 from pymoo.optimize import minimize
+from pymoo.util.display.progress import ProgressBar
 from pymoo.visualization.heatmap import Heatmap
 from pymoo.visualization.pcp import PCP
 from pymoo.visualization.petal import Petal
@@ -110,35 +111,43 @@ class NotificationCallback(Callback):
     def notify(self, algorithm):
         if self.verbose:
             time_delta = self.gen_tss[-1] - self.gen_tss[-2]
-            info(f'Finished generation {self.c_gen[0]}, it took {timestampToHumanReadable(time_delta)}! There were '
+            info(f'Finished generation {self.c_gen[0]}, it took `{timestampToHumanReadable(time_delta)}`! There were '
                  f'{self.c_eval[0]} evaluations so far, going until {self.max_eval}, '
                  f'best result so far: {algorithm.pop.get("F").min(axis=0)}!')
 
 
 class DisplayCallback(Callback):
-    def __init__(self, algorithm, verbose=False):
+    def __init__(self, output=None, progress=False, verbose=False):
         super().__init__()
-        self.output = algorithm.output
+        self.output = output
         self.verbose = verbose
+        self.progress = ProgressBar() if progress else None
         self.all_updates = []
 
     def update(self, algorithm, **kwargs):
+        if self.output is None:
+            self.output = algorithm.output
         output = self.output
         if self.verbose and output:
-            text = ""
-            header = not output.is_initialized
-            output(algorithm)
-            if header:
-                text += output.header(border=True) + '\n'
-            text += output.text()
-            clean(text)
-            self.all_updates.append(text)
+            try:
+                text = ""
+                header = not output.is_initialized
+                output(algorithm)
+                if header:
+                    text += output.header(border=True) + '\n'
+                text += output.text()
+                clean(text)
+                self.all_updates.append(text)
+            except Exception as e:
+                error(f'Error on DisplayCallback: `{e}`')
 
     def finalize(self):
         if self.verbose and len(self.all_updates) > 0:
             info('Overall updates:')
             for update in self.all_updates:
                 clean(update)
+        if self.progress:
+            self.progress.close()
 
 
 class ProphetNAS(ProblemClass):
@@ -147,7 +156,7 @@ class ProphetNAS(ProblemClass):
     VERBOSE_CALLBACKS = False
 
     ALGORITHM = GAAlgorithm.NSGA3.setObjs(5)
-    # n_partitions = floor(n_dims*REFERENCE_DIR_SETTINGS[1] + REFERENCE_DIR_SETTINGS[0])
+    # formula: n_partitions = floor(n_dims*REFERENCE_DIR_SETTINGS[1] + REFERENCE_DIR_SETTINGS[0])
     DEFAULT_REFERENCE_DIR_SETTINGS = (1, 1)
 
     def __init__(self, search_space: SearchSpace, processed_data: ProcessedDataset, pop_size: int = 50,

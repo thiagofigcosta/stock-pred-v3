@@ -312,3 +312,10 @@ def runWithExpRetry(name: str, function: Callable, args: list, kwargs: dict, max
                     raise e
                 else:
                     exception(e, False)
+
+
+def size(array: Union[list, set, np.ndarray]) -> int:
+    if type(array) is np.ndarray:
+        return array.shape[0]
+    else:
+        return len(array)

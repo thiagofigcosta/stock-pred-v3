@@ -358,15 +358,19 @@ class Prophet(object):
 
     def _plotTrainHistory(self):
         plot_data = []
+        to_plot = False
         if 'loss' in self.history:
             plot_data.append(
                 ('line', [list(range(len(self.history['loss']))), self.history['loss']], {'label': f'Loss'}))
+            to_plot = True
         if 'val_loss' in self.history:
             plot_data.append(('line', [list(range(len(self.history['val_loss']))), self.history['val_loss']],
                               {'label': f'Validation loss'}))
-        plot(plot_data, title='Training loss per epoch', x_label='epoch', y_label='loss', legend=True,
-             subdir=pathJoin(self.path_subdir, 'training_history'), add_rid_subdir=False,
-             file_prefix=False, file_postfix=False, file_label=self.basename)
+            to_plot = True
+        if to_plot:
+            plot(plot_data, title='Training loss per epoch', x_label='epoch', y_label='loss', legend=True,
+                 subdir=pathJoin(self.path_subdir, 'training_history'), add_rid_subdir=False,
+                 file_prefix=False, file_postfix=False, file_label=self.basename)
 
     def _plotDatasetPredictions(self, values: list, all_data: dict, ticker: str, d_type: DatasetSplit) -> None:
         max_plots_per_graph = 5

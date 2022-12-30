@@ -9,14 +9,14 @@ services:
       CLEANUP_BEFORE: "False"
       COMPRESS_AFTER: "True"
       NAS_PARALLELISM: "-6"
-      LSTM_PARALLELISM: "16"
+      LSTM_PARALLELISM: "-8"
       STOCK_LIST: "goog,pg,jnj,mmm,ko"
       START_DATE: "01/01/2002"
       END_DATE: "30/11/2022"
       MODE: "NAS"
       SS_ID: "LessNodeTypes"
       POP_SZ: "70"
-      MAX_EVAL: "1600"
+      MAX_EVAL: "1540"
       NAS_ALG: "NSGAIII"
       NAS_OBJ: "5"
       NAS_REF_DIRS_CONF: "(-1, 1)"
@@ -34,5 +34,5 @@ services:
       replicas: 1
       resources:
         limits:
-          cpus: "28"
+          cpus: "30"
           memory: 150G

@@ -174,7 +174,6 @@ def manualCosineSimilarity(predictions: list[Optional[float]], labels: list[Opti
         norm_labels += label ** 2
     norm_predictions = math.sqrt(norm_predictions)
     norm_labels = math.sqrt(norm_labels)
-    # Todo: invalid value encounterd in scalar divide?
     cos_sim = dot_product / max(EPSILON, (norm_predictions * norm_labels))
     if clip and cos_sim < 0:
         cos_sim = 0
