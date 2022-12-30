@@ -20,7 +20,7 @@ services:
       NAS_ALG: "NSGAIII"
       NAS_OBJ: "5"
       NAS_REF_DIRS_CONF: "(-1, 1)"
-      AGG_METHOD: "VOTING_EXP_F_WEIGHTED_AVERAGE"
+      AGG_METHOD: "VOTING_MEDIAN"
     volumes:
       - ./datasets:/code/datasets
       - ./hyperparameters:/code/hyperparameters

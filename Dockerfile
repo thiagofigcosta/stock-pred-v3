@@ -23,6 +23,7 @@ RUN cd ta-lib/ && ./configure && make && make install
 COPY --from=builder /root/.local /root/.local
 COPY entrypoint.sh /
 COPY clean_up_generated_files.sh .
+COPY kill_all_python_tasks.sh .
 COPY ./*.py ./
 # RUN --mount=type=bind,source=jars,target=/build/jars \
 #  find datasets -type f -maxdepth 1  -print0 \
@@ -32,6 +33,7 @@ mkdir -p prophets ; mkdir -p saved_plots ; mkdir -p experiments ; mkdir -p datas
 
 RUN chmod +x /entrypoint.sh
 RUN chmod +x clean_up_generated_files.sh
+RUN chmod +x kill_all_python_tasks.sh
 RUN chmod -R 777 hyperparameters
 RUN chmod -R 777 logs
 RUN chmod -R 777 models
