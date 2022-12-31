@@ -477,8 +477,11 @@ class Hyperparameters(object):
         if type(self.network.go_backwards) is bool:
             self.network.go_backwards = [self.network.go_backwards] * self.network.n_hidden_lstm_layers
         if type(self.network.bidirectional_layer) is bool:
-            self.network.bidirectional_layer = [self.network.bidirectional_layer] * (
-                    self.network.n_hidden_lstm_layers - 1)
+            if self.network.n_hidden_lstm_layers == 0:
+                self.network.bidirectional_layer = []
+            else:
+                self.network.bidirectional_layer = [self.network.bidirectional_layer] * (
+                        self.network.n_hidden_lstm_layers - 1)
 
         if size(self.network.dropout) != self.network.n_hidden_lstm_layers:
             raise ValueError(f'Wrong dropout_values array size, should be {self.network.n_hidden_lstm_layers} '
@@ -525,7 +528,8 @@ class Hyperparameters(object):
         if size(self.network.activity_l2_regularizer) != self.network.n_hidden_lstm_layers + 1:
             raise ValueError(
                 f'Wrong activity_l2_regularizer array size, should be {self.network.n_hidden_lstm_layers + 1}')
-        if size(self.network.bidirectional_layer) != self.network.n_hidden_lstm_layers - 1:
+        if self.network.n_hidden_lstm_layers > 0 and size(
+                self.network.bidirectional_layer) != self.network.n_hidden_lstm_layers - 1:
             raise ValueError(f'Wrong bidirectional_layer array size, should be {self.network.n_hidden_lstm_layers - 1} '
                              f'instead of {size(self.network.bidirectional_layer)}')
 
@@ -880,7 +884,7 @@ bidirectional_layer: {self.network.bidirectional_layer},
             dict(name='activity_l2_regularizer', type_match=SearchSpace.Type.FLOAT, fallback='search_const',
                  action='track_list', list_size='n_hidden_lstm_layers', increase_list_by=1),
             dict(name='bidirectional_layer', type_match=SearchSpace.Type.BOOLEAN, fallback='search_const',
-                 action='track_list', list_size='n_hidden_lstm_layers', increase_list_by=-1, mandatory=True),
+                 action='track_list', list_size='n_hidden_lstm_layers', increase_list_by=-2, mandatory=True),
             dict(name='stateful', type_match=SearchSpace.Type.BOOLEAN, action='track', mandatory=True),
             dict(name='go_backwards', type_match=SearchSpace.Type.BOOLEAN, fallback='search_const', action='track_list',
                  list_size='n_hidden_lstm_layers'),
@@ -952,10 +956,12 @@ bidirectional_layer: {self.network.bidirectional_layer},
                                 list_size = stored_values[list_size]
                             else:
                                 ValueError(f'Invalid list_size type {type(list_size)}')
-                            list_size += increase_list_by
+                            list_size += increase_list_by + 1
                             first_idx = None
                             last_idx = None
-                            for i in range(list_size + 1):
+                            if list_size <= 0:
+                                list_size = 1 # just to prevent errors
+                            for i in range(list_size):
                                 new_name = f'{name}[{i}]'
                                 idx = enriched_space.add(data_type=dim.data_type, min_value=dim.min_value,
                                                          max_value=dim.max_value, choices=dim.choices, const=dim.const,
