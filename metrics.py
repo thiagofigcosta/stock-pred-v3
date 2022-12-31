@@ -5,6 +5,7 @@ from enum import Enum, auto
 from typing import Union, Callable, Optional
 
 import numpy as np
+from keras.metrics import RootMeanSquaredError
 from sklearn import metrics as sk_metrics
 from sklearn.exceptions import UndefinedMetricWarning
 
@@ -93,14 +94,19 @@ def getKerasRegressionMetrics(get_names_only: bool = False) -> list[Union[str, C
         Metric.MAE,
         Metric.ACCURACY,
         Metric.COSINE_SIM,
-        # Metric.RMSE,
-        Metric.MAPE
+        Metric.MAPE,
+        Metric.RMSE,
     ]
     for i, metric in enumerate(metrics):
-        if not get_names_only and metric == Metric.R2:
-            metrics[i] = createR2TfMetric()
-        else:
+        if get_names_only:
             metrics[i] = metric.toKerasName()
+        else:
+            if metric == Metric.R2:
+                metrics[i] = createR2TfMetric()
+            elif metric == Metric.RMSE:
+                metrics[i] = RootMeanSquaredError()
+            else:
+                metrics[i] = metric.toKerasName()
     return metrics
 
 

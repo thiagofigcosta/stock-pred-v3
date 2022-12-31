@@ -24,7 +24,7 @@ from tensorflow import keras
 from keras.models import Sequential, load_model
 from keras.utils import plot_model
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint, History
-from keras.layers import LSTM, Dropout, Dense, LeakyReLU
+from keras.layers import LSTM, Dropout, Dense, LeakyReLU, Bidirectional
 from keras.optimizers import Adam, SGD, RMSprop
 from keras.callbacks import Callback
 from keras.regularizers import L1L2

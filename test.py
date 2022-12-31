@@ -1,4 +1,5 @@
 import numpy as np
+import tensorflow as tf
 
 import logger
 from crawler import downloadTicker
@@ -77,6 +78,40 @@ x = aggregateDecodedPredictions(x, AggregationMethod.FIRST)
 print(f'Aggregated predictions: {x}')
 print()
 
+
+def test_tf(y_true, y_pred):
+    y_true = np.array(y_true)
+    y_pred = np.array(y_pred)
+
+    y_true = tf.convert_to_tensor(y_true)
+    y_pred = tf.convert_to_tensor(y_pred)
+    tf.print("y_true", y_true)
+    tf.print("y_pred", y_pred)
+
+    y_true = tf.transpose(y_true)
+    y_pred = tf.transpose(y_pred)
+
+    mae = tf.keras.metrics.mean_absolute_error(y_true, y_pred)
+    tf.print("mae", mae)
+
+
+y_true = [[1, 2, 3], [2, 3, 4], [3, 4, 5], [4, 5, 6], [5, 6, 7], [6, 7, 8], [7, 8, 9], [8, 9, 10], [9, 10, 11]]
+y_pred = [[1.1, 2.1, 3.1], [2.1, 3.1, 4.1], [3.1, 4.1, 5.1], [4.1, 5.1, 6.1], [5.1, 6.1, 7.1], [6.1, 7.1, 8.1],
+          [7.1, 8.1, 9.1], [8.1, 9.1, 10.1], [9.1, 10.1, 11.1]]
+
+test_tf(y_true, y_pred)
+
+y_true = [[1, 2, 3, 4], [2, 3, 4, 5]]
+y_pred = [[1.1, 2.1, 3.1, 4], [2.1, 3.1, 4.1, 5]]
+
+test_tf(y_true, y_pred)
+
+y_true = [[1, 2, 3, 4], [2, 3, 4, 5], [3, 4, 5, 6]]
+y_pred = [[1.1, 2.1, 3.1, 4], [2.1, 3.1, 4.1, 5], [3.1, 4.1, 5.1, 6.1]]
+
+test_tf(y_true, y_pred)
+
+# exit()
 configure(name='stock-pred-v3-test', level=logger.Level.VERBOSE)
 
 ticker = 'goog'
