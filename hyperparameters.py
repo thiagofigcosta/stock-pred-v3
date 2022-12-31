@@ -884,7 +884,7 @@ bidirectional_layer: {self.network.bidirectional_layer},
             dict(name='activity_l2_regularizer', type_match=SearchSpace.Type.FLOAT, fallback='search_const',
                  action='track_list', list_size='n_hidden_lstm_layers', increase_list_by=1),
             dict(name='bidirectional_layer', type_match=SearchSpace.Type.BOOLEAN, fallback='search_const',
-                 action='track_list', list_size='n_hidden_lstm_layers', increase_list_by=-2, mandatory=True),
+                 action='track_list', list_size='n_hidden_lstm_layers', increase_list_by=-1, mandatory=True),
             dict(name='stateful', type_match=SearchSpace.Type.BOOLEAN, action='track', mandatory=True),
             dict(name='go_backwards', type_match=SearchSpace.Type.BOOLEAN, fallback='search_const', action='track_list',
                  list_size='n_hidden_lstm_layers'),
@@ -959,8 +959,8 @@ bidirectional_layer: {self.network.bidirectional_layer},
                             list_size += increase_list_by + 1
                             first_idx = None
                             last_idx = None
-                            if list_size <= 0:
-                                list_size = 1 # just to prevent errors
+                            if list_size < 0:
+                                list_size = 0  # just to prevent errors
                             for i in range(list_size):
                                 new_name = f'{name}[{i}]'
                                 idx = enriched_space.add(data_type=dim.data_type, min_value=dim.min_value,
@@ -1043,6 +1043,8 @@ bidirectional_layer: {self.network.bidirectional_layer},
             max_size = h_layers
             if array_feature.endswith('_regularizer'):  # TODO make map to store the size of array features
                 max_size += 1
+            if array_feature.startswith('bidirectional_'):  # TODO make map to store the size of array features
+                max_size = max(0, max_size - 1)
             hyperparameters_dict[array_feature] = hyperparameters_dict[array_feature][:max_size]
         for dimension in search_space:
             if dimension.data_type == SearchSpace.Type.CONSTANT and dimension.name not in hyperparameters_dict:
