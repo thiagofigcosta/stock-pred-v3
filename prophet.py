@@ -88,6 +88,7 @@ class Prophet(object):
     __create_key = object()
     _new_model_counter = 0
 
+    USE_ENHANCED_LOSS = True
     PARALLELISM = 1  # 1 means no parallelism, 0 means all cores
 
     def __init__(self, basename: str, model: Sequential(), callbacks: list[Callback],
@@ -562,24 +563,19 @@ class Prophet(object):
     def getProphetFilepath(self) -> str:
         return Prophet.getProphetFilepathFromBasename(self.basename, self.path_subdir)
 
-    def enhancedLoss(self, loss_name):
-        # TODO ADAPT THIS TO OUR CONTEXT
-        USE_ALL_INSTEAD_OF_ANY = True
-        LOSS_NEGATIVE_LABEL_WEIGHT = 0.3
-        LOSS_POSITIVE_LABEL_WEIGHT = 1.0
-
+    @staticmethod
+    def enhancedLoss(loss_name):
+        # maybe we could
         def loss(y_true, y_pred):
+            # by transposing we make TF compute the loss of each prediction independently of the others, 
+            # first with first, ..., last with last
+            y_true_t = tf.transpose(y_true)
+            y_pred_t = tf.transpose(y_pred)
             loss_fn = tf.keras.losses.get(loss_name)
-            loss_v = loss_fn(y_true, y_pred)
-            loss_negative_label = loss_v * LOSS_NEGATIVE_LABEL_WEIGHT
-            loss_positive_label = loss_v * LOSS_POSITIVE_LABEL_WEIGHT
-            cond = tf.keras.backend.greater_equal(y_true, 1)
-            if USE_ALL_INSTEAD_OF_ANY:
-                cond = tf.keras.backend.all(cond, axis=1)
-            else:
-                cond = tf.keras.backend.any(cond, axis=1)
-            # returns loss_positive_label when all y_true>=1 (or one of them for any)
-            loss_v = tf.keras.backend.switch(cond, loss_positive_label, loss_negative_label)
+            loss_values = loss_fn(y_true_t, y_pred_t)
+            # by making the mean of the loses of each prediction we allow to compare losses between two models with  
+            # different values of forward samples
+            loss_v = tf.math.reduce_mean(loss_values)
             return loss_v
 
         return loss
@@ -813,7 +809,11 @@ class Prophet(object):
             opt = RMSprop(**clip_dict)
         else:
             raise ValueError(f'Unknown optimizer {configs.network.optimizer}')
-        model.compile(loss=configs.network.loss.toKerasName(), optimizer=opt,
+
+        loss = configs.network.loss.toKerasName()
+        if Prophet.USE_ENHANCED_LOSS:
+            loss = Prophet.enhancedLoss(loss)
+        model.compile(loss=loss, optimizer=opt,
                       metrics=getKerasRegressionMetrics())
 
         callbacks = Prophet._genCallbacks(configs, basename, path_subdir=path_subdir, do_verbose=do_verbose)

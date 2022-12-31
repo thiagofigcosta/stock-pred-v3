@@ -88,11 +88,14 @@ def test_tf(y_true, y_pred):
     tf.print("y_true", y_true)
     tf.print("y_pred", y_pred)
 
+    mae = tf.keras.metrics.mean_absolute_error(y_true, y_pred)
+    tf.print("mae", mae)
+
     y_true = tf.transpose(y_true)
     y_pred = tf.transpose(y_pred)
 
     mae = tf.keras.metrics.mean_absolute_error(y_true, y_pred)
-    tf.print("mae", mae)
+    tf.print("mae_t", mae)
 
 
 y_true = [[1, 2, 3], [2, 3, 4], [3, 4, 5], [4, 5, 6], [5, 6, 7], [6, 7, 8], [7, 8, 9], [8, 9, 10], [9, 10, 11]]
@@ -119,7 +122,7 @@ start_date = '01/01/2016'
 end_date = '01/12/2022'
 recreate_dataset = False
 force_retrain = False
-prophet_to_load_path = 'prophets/lstm_model-0-40f58875c9974ee91338f0395f9642b5dde8ac73bb626b4f45e27f65c66f982e.json'
+prophet_to_load_path = 'prophets/lstm_model-0-8a037734a0860b0b413f07dc631dd5b362a8a7df78fd4e8f2a74c7ca0775bbf0.json'
 max_epochs = 10
 
 dataset_filepath = downloadTicker(ticker, start_date, end_date, force=recreate_dataset)
