@@ -526,7 +526,8 @@ class Hyperparameters(object):
             raise ValueError(
                 f'Wrong activity_l2_regularizer array size, should be {self.network.n_hidden_lstm_layers + 1}')
         if size(self.network.bidirectional_layer) != self.network.n_hidden_lstm_layers - 1:
-            raise ValueError(f'Wrong bidirectional_layer array size, should be {self.network.n_hidden_lstm_layers - 1}')
+            raise ValueError(f'Wrong bidirectional_layer array size, should be {self.network.n_hidden_lstm_layers - 1} '
+                             f'instead of {size(self.network.bidirectional_layer)}')
 
         for i in range(size(self.network.activation_funcs)):
             if type(self.network.activation_funcs[i]) in getNumericTypes():
