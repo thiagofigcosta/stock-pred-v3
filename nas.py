@@ -100,7 +100,7 @@ class GAAlgorithm(Enum):
 
 class NotificationCallback(Callback):
 
-    def __init__(self, verbose: bool, c_gen: list, c_eval: list, max_eval: list, gen_tss: list) -> None:
+    def __init__(self, verbose: bool, c_gen: list, c_eval: list, max_eval: int, gen_tss: list) -> None:
         super().__init__()
         self.verbose = verbose
         self.c_gen = c_gen
@@ -111,8 +111,9 @@ class NotificationCallback(Callback):
     def notify(self, algorithm):
         if self.verbose:
             time_delta = self.gen_tss[-1] - self.gen_tss[-2]
-            info(f'Finished generation {self.c_gen[0]}, it took `{timestampToHumanReadable(time_delta)}`! There were '
-                 f'{self.c_eval[0]} evaluations so far, going until {self.max_eval}, '
+            info(f'Finished generation {self.c_gen[0]}, it took '
+                 f'`{timestampToHumanReadable(time_delta, detailed_text=True)}`! '
+                 f'There were {self.c_eval[0]} evaluations so far, going until {self.max_eval}, '
                  f'best result so far: {algorithm.pop.get("F").min(axis=0)}!')
 
 
@@ -137,7 +138,10 @@ class DisplayCallback(Callback):
                     text += output.header(border=True) + '\n'
                 text += output.text()
                 clean(text)
-                self.all_updates.append(text)
+                if '\n' in text:
+                    self.all_updates += text.split('\n')
+                else:
+                    self.all_updates.append(text)
             except Exception as e:
                 error(f'Error on DisplayCallback: `{e}`')
 
@@ -145,7 +149,7 @@ class DisplayCallback(Callback):
         if self.verbose and len(self.all_updates) > 0:
             info('Overall updates:')
             for update in self.all_updates:
-                clean(update)
+                clean(f'\t{update}')
         if self.progress:
             self.progress.close()
 
@@ -324,7 +328,7 @@ class ProphetNAS(ProblemClass):
             termination=('n_evals', max_eval),
             save_history=store_metrics,
             callback=NotificationCallback(self.verbose, self.c_gen, self.c_eval, self.max_eval, self.gen_p_times),
-            display=DisplayCallback(self.algorithm, self.verbose),
+            display=DisplayCallback(verbose=self.verbose),
             verbose=self.verbose
         )
         info(f'Found {len(res.opt)} non-dominated solutions!')

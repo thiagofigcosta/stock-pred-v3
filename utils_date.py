@@ -101,7 +101,7 @@ def getDiffInYearsFromStrDate(date1: str, date2: str, date_format: str = HUMAN_D
     return years
 
 
-def timestampToHumanReadable(timestamp, seconds=True):
+def timestampToHumanReadable(timestamp, seconds=True, detailed_text=False):
     if seconds:
         timestamp_ms = timestamp * 1000
     else:
@@ -116,7 +116,17 @@ def timestampToHumanReadable(timestamp, seconds=True):
     M = tmp_2 % 60
     S = tmp_1 % 60
     MS = timestamp_ms % 1000
-    out = f'{H:02}:{M:02}:{S:02}.{MS:06}'
+    if detailed_text:
+        out = ''
+        if H > 0:
+            out += f'{H} hour{"s" if H > 1 else ""} '
+        if M > 0:
+            out += f'{M} minutes{"s" if M > 1 else ""} '
+        if H > 0 or M > 0:
+            out += 'and '
+        out += f'{S}.{MS:06} second{"s" if S > 1 or MS > 1 else ""}'
+    else:
+        out = f'{H:02}:{M:02}:{S:02}.{MS:06}'
     if D > 0:
-        out = f'{D} days and {out}'
+        out = f'{D} day{"s" if D > 1 else ""} and {out}'
     return out
