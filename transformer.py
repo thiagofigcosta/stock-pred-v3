@@ -165,7 +165,7 @@ def transform(filepath: str, force: bool = False, configs: Optional[Hyperparamet
         plotDataframe(df_reduced, DATE_COLUMN, df_reduced.columns, title, 'reduced_feats', plot_prefix=plot_prefix,
                       x_dateformat=SAVE_DATE_FORMAT, legend_outside=True)
 
-    if configs.dataset.normalize_prediction_feat:  # TODO make this process later, before training
+    if configs.dataset.normalize_prediction_feat:
         predict_values, third_scaler = normalizeDataset(df[PREDICT_COLUMN], configs.dataset.norm_range, log=False)
         df_reduced[PREDICT_COLUMN] = predict_values
         if do_plots:

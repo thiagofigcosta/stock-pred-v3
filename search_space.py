@@ -415,6 +415,7 @@ def getSearchSpace(dataset_filename: Optional[str] = None, name: Optional[str] =
     ss.add(name='use_bias', data_type=SSpaceType.BOOLEAN)
     ss.add(name='unit_forget_bias', data_type=SSpaceType.BOOLEAN)
     ss.add(name='go_backwards', data_type=SSpaceType.BOOLEAN)
+    ss.add(name='bidirectional_layer', data_type=SSpaceType.BOOLEAN)
     # only work if we load files during the nas callback
     if preprocess_on_nas:
         ss.add(name='normalize', data_type=SSpaceType.BOOLEAN)
@@ -430,7 +431,7 @@ def getMidSearchSpace(dataset_filename: Optional[str] = None, name: Optional[str
     if name is not None:
         ss.add(name='name', data_type=SSpaceType.CONSTANT, const=name)
     ss.add(name='backward_samples', data_type=SSpaceType.INT, min_value=5, max_value=60)
-    ss.add(name='forward_samples', data_type=SSpaceType.INT, min_value=7, max_value=7)  # TODO 7 - 14
+    ss.add(name='forward_samples', data_type=SSpaceType.INT, min_value=7, max_value=7)
     ss.add(name='max_epochs', data_type=SSpaceType.INT, min_value=200, max_value=2000)
     ss.add(name='stateful', data_type=SSpaceType.BOOLEAN)
     ss.add(name='batch_size', data_type=SSpaceType.INT, min_value=0, max_value=128)
@@ -459,6 +460,7 @@ def getMidSearchSpace(dataset_filename: Optional[str] = None, name: Optional[str
     ss.add(name='use_bias', data_type=SSpaceType.BOOLEAN)
     ss.add(name='unit_forget_bias', data_type=SSpaceType.BOOLEAN)
     ss.add(name='go_backwards', data_type=SSpaceType.BOOLEAN)
+    ss.add(name='bidirectional_layer', data_type=SSpaceType.BOOLEAN)
     # only work if we load files during the nas callback
     if preprocess_on_nas:
         ss.add(name='normalize', data_type=SSpaceType.BOOLEAN)
@@ -495,6 +497,7 @@ def getDummySearchSpace(dataset_filename: Optional[str] = None, name: Optional[s
     ss.add(name='use_bias', data_type=SSpaceType.BOOLEAN)
     ss.add(name='unit_forget_bias', data_type=SSpaceType.BOOLEAN)
     ss.add(name='go_backwards', data_type=SSpaceType.BOOLEAN)
+    ss.add(name='bidirectional_layer', data_type=SSpaceType.BOOLEAN)
     # only work if we load files during the nas callback
     if preprocess_on_nas:
         ss.add(name='normalize', data_type=SSpaceType.BOOLEAN)
@@ -539,6 +542,7 @@ def getFastSearchSpace(dataset_filename: Optional[str] = None, name: Optional[st
     ss.add(name='use_bias', data_type=SSpaceType.BOOLEAN)
     ss.add(name='unit_forget_bias', data_type=SSpaceType.BOOLEAN)
     ss.add(name='go_backwards', data_type=SSpaceType.BOOLEAN)
+    ss.add(name='bidirectional_layer', data_type=SSpaceType.BOOLEAN)
     # only work if we load files during the nas callback
     if preprocess_on_nas:
         ss.add(name='normalize', data_type=SSpaceType.BOOLEAN)

@@ -94,6 +94,7 @@ class Hyperparameters(object):
                  shuffle: Optional[bool] = None,
                  loss: Optional[Union[Loss, int]] = None,
                  leaky_relu_alpha: Optional[Union[Loss, float]] = None,
+                 bidirectional_layer: Optional[Union[list[bool], bool]] = None,
                  # parameters wrappers
                  dataset_parameters: Optional[SubParameters] = None,
                  enricher_parameters: Optional[SubParameters] = None,
@@ -330,6 +331,10 @@ class Hyperparameters(object):
             if leaky_relu_alpha is None:
                 leaky_relu_alpha = 0.3
             network_parameters.leaky_relu_alpha = leaky_relu_alpha
+
+            if bidirectional_layer is None:
+                bidirectional_layer = True
+            network_parameters.bidirectional_layer = bidirectional_layer
         self.network = network_parameters
 
         self.validate()
@@ -471,6 +476,9 @@ class Hyperparameters(object):
 
         if type(self.network.go_backwards) is bool:
             self.network.go_backwards = [self.network.go_backwards] * self.network.n_hidden_lstm_layers
+        if type(self.network.bidirectional_layer) is bool:
+            self.network.bidirectional_layer = [self.network.bidirectional_layer] * (
+                    self.network.n_hidden_lstm_layers - 1)
 
         if size(self.network.dropout) != self.network.n_hidden_lstm_layers:
             raise ValueError(f'Wrong dropout_values array size, should be {self.network.n_hidden_lstm_layers} '
@@ -517,6 +525,8 @@ class Hyperparameters(object):
         if size(self.network.activity_l2_regularizer) != self.network.n_hidden_lstm_layers + 1:
             raise ValueError(
                 f'Wrong activity_l2_regularizer array size, should be {self.network.n_hidden_lstm_layers + 1}')
+        if size(self.network.bidirectional_layer) != self.network.n_hidden_lstm_layers - 1:
+            raise ValueError(f'Wrong bidirectional_layer array size, should be {self.network.n_hidden_lstm_layers - 1}')
 
         for i in range(size(self.network.activation_funcs)):
             if type(self.network.activation_funcs[i]) in getNumericTypes():
@@ -558,7 +568,6 @@ class Hyperparameters(object):
 
     def loadAmountOfFeatures(self) -> Optional[int]:
         if self.dataset_filename is not None:
-            # todo fix this workaround
             from transformer import loadAmountOfFeaturesFromFile
             return loadAmountOfFeaturesFromFile(self.dataset_filename)
 
@@ -652,6 +661,7 @@ reduce_factor: {self.network.reduce_factor},
 shuffle: {self.network.shuffle},  
 loss: {self.network.loss},  
 leaky_relu_alpha: {self.network.leaky_relu_alpha},  
+bidirectional_layer: {self.network.bidirectional_layer},  
 """
 
     def genUuids(self) -> tuple[str, str, str, str, str, str]:
@@ -789,6 +799,7 @@ leaky_relu_alpha: {self.network.leaky_relu_alpha},
             shuffle=obj.get('network', obj).get('shuffle', None),
             loss=obj.get('network', obj).get('loss', None),
             leaky_relu_alpha=obj.get('network', obj).get('leaky_relu_alpha', None),
+            bidirectional_layer=obj.get('network', obj).get('bidirectional_layer', None),
         )
 
     @staticmethod
@@ -867,6 +878,8 @@ leaky_relu_alpha: {self.network.leaky_relu_alpha},
                  action='track_list', list_size='n_hidden_lstm_layers', increase_list_by=1),
             dict(name='activity_l2_regularizer', type_match=SearchSpace.Type.FLOAT, fallback='search_const',
                  action='track_list', list_size='n_hidden_lstm_layers', increase_list_by=1),
+            dict(name='bidirectional_layer', type_match=SearchSpace.Type.BOOLEAN, fallback='search_const',
+                 action='track_list', list_size='n_hidden_lstm_layers', increase_list_by=-1, mandatory=True),
             dict(name='stateful', type_match=SearchSpace.Type.BOOLEAN, action='track', mandatory=True),
             dict(name='go_backwards', type_match=SearchSpace.Type.BOOLEAN, fallback='search_const', action='track_list',
                  list_size='n_hidden_lstm_layers'),

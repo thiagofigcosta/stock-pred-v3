@@ -625,7 +625,7 @@ class Prophet(object):
         filename_no_ext = removeFileExtension(basename)
         filename_changed = ''
         if not filename_no_ext.strip().endswith('.') and filename_no_ext.strip() != '':
-            # '_{epoch:06d}_{val_loss}' # TODO for this i have to search for the best loss when loading
+            # '_{epoch:06d}_{val_loss}' # placeholders for keras
             keras_placeholders = ''
             filename_changed = f'{filename_no_ext}' + keras_placeholders + '_cp.h5'
         return pathJoin(MODELS_DIR, path_subdir, CHECKPOINT_SUBDIR, filename_changed)
@@ -740,7 +740,10 @@ class Prophet(object):
                 lstm_kwargs['batch_input_shape'] = batch_input_shape
             else:
                 lstm_kwargs['input_shape'] = input_shape
-            model.add(LSTM(configs.network.layer_sizes[l + 1], **lstm_kwargs))
+            if l == 0 or not configs.network.bidirectional_layer[l - 1]:
+                model.add(LSTM(configs.network.layer_sizes[l + 1], **lstm_kwargs))
+            else:
+                model.add(Bidirectional(LSTM(configs.network.layer_sizes[l + 1], **lstm_kwargs), name=f'bi_lstm_h_{l}'))
             if advanced_activation is not None:
                 if advanced_activation == ActivationFunc.LEAKY_RELU:
                     model.add(LeakyReLU(alpha=configs.network.leaky_relu_alpha, name=f'lrelu_{l}'))
@@ -768,7 +771,7 @@ class Prophet(object):
             else:
                 model.add(LSTM(configs.network.forward_samples * n_tickers,
                                activation=output_activation.toKerasName(), time_major=time_major, name='lstm_out'))
-        else:  # No dense layer for n_hidden_lstm_layers == 0
+        else:  # No dense layer for when n_hidden_lstm_layers == 0
             input_shape = (
                 configs.network.backward_samples, n_tickers * input_features_size)
             batch_size = batch_size_from_configs
@@ -858,7 +861,7 @@ class Prophet(object):
         createFolder(checkpoint_filedir)
         checkpoint_filepath = Prophet._getCheckpointFilepath(basename, path_subdir)
         checkpoint = ModelCheckpoint(checkpoint_filepath, monitor='val_loss', verbose=1 if do_verbose else 0,
-                                     save_best_only=True, mode='auto')
+                                     save_best_only=True, mode='min')  # mode='auto'
         callbacks.append(checkpoint)
         reset_states_after_epoch = CustomCallback(is_verbose=do_verbose, is_stateful=configs.network.stateful)
         callbacks.append(reset_states_after_epoch)
