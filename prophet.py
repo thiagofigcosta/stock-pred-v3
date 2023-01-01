@@ -579,7 +579,7 @@ class Prophet(object):
             loss_v = tf.math.reduce_mean(loss_values)
             return loss_v
 
-        loss.__name__ = 'loss'
+        loss.__name__ = 'custom_loss'
         return loss
 
     @staticmethod
