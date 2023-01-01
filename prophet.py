@@ -6,7 +6,7 @@ import numpy as np
 
 from hyperparameters import Hyperparameters
 from logger import verbose, error, info, clean, getVerbose
-from metrics import getKerasRegressionMetrics, getAllCustomMetrics, EPSILON
+from metrics import getKerasRegressionMetrics, EPSILON, createR2TfMetric
 from plotter import FIGURE_DPI, plot, getPlotColorFromIndex, getColorGradientsFromIndex
 from postprocessor import decodeWindowedPredictions, decodeWindowedLabels, computeMetricsAndGetValues, AggregationMethod
 from preprocessor import ProcessedDataset, DatasetSplit
@@ -185,7 +185,8 @@ class Prophet(object):
         cp_filepath = self.getCheckpointFilepath()
         if pathExists(cp_filepath) and (force or not pathExists(self.getOverwrittenByCpModelFilepath())):
             info(f'Restoring {getBasename(cp_filepath)} checkpoint...', do_log)
-            loaded_model = load_model(cp_filepath, custom_objects=getAllCustomMetrics())
+            loaded_model = load_model(cp_filepath, custom_objects=Prophet.getAllCustomObjects(
+                self.configs.network.loss.toKerasName()))
             if self.model is None:
                 self.model = loaded_model
             else:
@@ -578,7 +579,18 @@ class Prophet(object):
             loss_v = tf.math.reduce_mean(loss_values)
             return loss_v
 
+        loss.__name__ = 'loss'
         return loss
+
+    @staticmethod
+    def getAllCustomObjects(loss_name: Optional[str] = None) -> dict:
+        custom_objs = [createR2TfMetric()]
+        if Prophet.USE_ENHANCED_LOSS:
+            custom_objs.append(Prophet.enhancedLoss(loss_name))
+        custom_dict = {}
+        for c in custom_objs:
+            custom_dict[c.__name__] = c
+        return custom_dict
 
     @staticmethod
     def genProphetBasename(configs: Hyperparameters, basename: Optional[str] = None, include_rid: bool = False,
@@ -829,9 +841,9 @@ class Prophet(object):
         info(f'Loading prophet from `{prophet_filepath}`...', do_log)
         prophet_meta = runWithExpRetry(f'LoadProphet', loadJson, [prophet_filepath], {}, 3)
         basename = prophet_meta['basename']
-        model = runWithExpRetry(f'LoadModel', load_model, [prophet_meta['paths']['model']],
-                                dict(custom_objects=getAllCustomMetrics()), 3)
         configs = Hyperparameters.loadJson(prophet_meta['paths']['hyperparameters'])  # already has exceptionExpRetry
+        model = runWithExpRetry(f'LoadModel', load_model, [prophet_meta['paths']['model']],
+                                dict(custom_objects=Prophet.getAllCustomObjects(configs.network.loss.toKerasName())), 3)
         callbacks = Prophet._genCallbacks(configs, basename, path_subdir=path_subdir, do_verbose=do_verbose)
         prophet = Prophet(basename, model, callbacks, configs, do_verbose=do_verbose, path_subdir=path_subdir,
                           _create_key=Prophet.__create_key)

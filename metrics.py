@@ -79,14 +79,6 @@ def createR2TfMetric() -> Callable:
     return r_squared
 
 
-def getAllCustomMetrics() -> dict:
-    custom = [createR2TfMetric()]
-    custom_dict = {}
-    for c in custom:
-        custom_dict[c.__name__] = c
-    return custom_dict
-
-
 def getKerasRegressionMetrics(get_names_only: bool = False) -> list[Union[str, Callable]]:
     metrics = [
         Metric.R2,
