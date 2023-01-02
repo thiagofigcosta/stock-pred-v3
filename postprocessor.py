@@ -638,6 +638,8 @@ def castRegressionToBinary(array: list[Union[np.float32, float]],
 
 def castRegressionToBinaryConfidence(array: list[Union[np.float32, float]],
                                      previous_value: Union[np.float32, float]) -> list[float]:
+    if size(array) == 0:
+        return []
     deltas = castRegressionToDelta(array, previous_value)
     all_neg = [el for el in deltas if el <= 0]
     all_neg_min = min(all_neg)

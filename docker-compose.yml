@@ -8,8 +8,8 @@ services:
     environment:
       CLEANUP_BEFORE: "False"
       COMPRESS_AFTER: "True"
-      NAS_PARALLELISM: "-6"
-      LSTM_PARALLELISM: "-8"
+      NAS_PARALLELISM: "-4"
+      LSTM_PARALLELISM: "-4"
       STOCK_LIST: "goog,pg,jnj,mmm,ko"
       START_DATE: "01/01/2002"
       END_DATE: "30/11/2022"
