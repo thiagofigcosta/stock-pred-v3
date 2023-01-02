@@ -8,8 +8,8 @@ services:
     environment:
       CLEANUP_BEFORE: "False"
       COMPRESS_AFTER: "True"
-      NAS_PARALLELISM: "-4"
-      LSTM_PARALLELISM: "-4"
+      NAS_PARALLELISM: "-5"
+      LSTM_PARALLELISM: "-5"
       STOCK_LIST: "goog,pg,jnj,mmm,ko"
       START_DATE: "01/01/2002"
       END_DATE: "30/11/2022"
@@ -34,5 +34,5 @@ services:
       replicas: 1
       resources:
         limits:
-          cpus: "30"
+          cpus: "36"
           memory: 150G
