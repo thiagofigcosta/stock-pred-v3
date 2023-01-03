@@ -16,7 +16,7 @@ services:
       MODE: "NAS"
       SS_ID: "LessNodeTypes"
       POP_SZ: "70"
-      MAX_EVAL: "1540"
+      MAX_EVAL: "1050"
       NAS_ALG: "NSGAIII"
       NAS_OBJ: "5"
       NAS_REF_DIRS_CONF: "(-1, 1)"

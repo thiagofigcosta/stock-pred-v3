@@ -229,6 +229,8 @@ def dropNanValuesSimultaneously(array_a: Union[np.ndarray, list],
         array_a = np.array(array_a)
     if type(array_b) is list:
         array_b = np.array(array_b)
+    if array_a.shape[0] == 0 or array_b.shape[0] == 0:
+        return array_a, array_b
     nan_from_a = list(np.argwhere(np.isnan(array_a)).squeeze())
     nan_from_b = list(np.argwhere(np.isnan(array_b)).squeeze())
     nan_from_both = list(set(nan_from_a + nan_from_b))

@@ -323,11 +323,15 @@ def size(array: Union[list, set, np.ndarray]) -> int:
 
 def scaleElementDiff(el: float, min_v: float, diff: float) -> float:
     scaled = (el - min_v) / diff
+    if diff == 0:
+        return el
     return scaled
 
 
 def scaleElementMinMax(el: float, min_v: float, max_v: float) -> float:
     diff = max_v - min_v
+    if diff == 0:
+        return el
     scaled = (el - min_v) / diff
     return scaled
 

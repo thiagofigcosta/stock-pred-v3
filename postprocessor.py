@@ -636,22 +636,36 @@ def castRegressionToBinary(array: list[Union[np.float32, float]],
     return [1 if el > 0 else 0 for el in deltas]
 
 
+def scalePosNegElement(element: float, min_val: Optional[float], diff_val: Optional[float], is_max: bool) -> float:
+    if min_val is None or diff_val is None or diff_val == 0:
+        return 0.501 if is_max else 0.001
+    scaled = scaleElementDiff(element, min_val, diff_val) * .49
+    if is_max:
+        scaled += .51
+    return scaled
+
+
 def castRegressionToBinaryConfidence(array: list[Union[np.float32, float]],
                                      previous_value: Union[np.float32, float]) -> list[float]:
     if size(array) == 0:
         return []
     deltas = castRegressionToDelta(array, previous_value)
     all_neg = [el for el in deltas if el <= 0]
-    all_neg_min = min(all_neg)
-    all_neg_max = max(all_neg)
-    all_neg_diff = all_neg_max - all_neg_min
+    if len(all_neg) > 1:
+        all_neg_min = min(all_neg)
+        all_neg_max = max(all_neg)
+        all_neg_diff = all_neg_max - all_neg_min
+    else:
+        all_neg_min = all_neg_diff = None
     all_pos = [el for el in deltas if el > 0]
-    all_pos_min = min(all_pos)
-    all_pos_max = max(all_pos)
-    all_pos_diff = all_pos_max - all_pos_min
-
-    return [scaleElementDiff(el, all_pos_min, all_pos_diff) * .49 + .51 if el > 0 else
-            scaleElementDiff(el, all_neg_min, all_neg_diff) * .49 for el in deltas]
+    if len(all_pos) > 1:
+        all_pos_min = min(all_pos)
+        all_pos_max = max(all_pos)
+        all_pos_diff = all_pos_max - all_pos_min
+    else:
+        all_pos_min = all_pos_diff = None
+    return [scalePosNegElement(el, all_pos_min, all_pos_diff, True) if el > 0
+            else scalePosNegElement(el, all_neg_min, all_neg_diff, False) for el in deltas]
 
 
 def computeMetricsAndGetValues(predictions: Union[dict, Optional[list[Optional[list]]]], labels: dict,
