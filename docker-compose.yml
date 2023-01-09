@@ -10,7 +10,7 @@ services:
       COMPRESS_AFTER: "True"
       NAS_PARALLELISM: "-5"
       LSTM_PARALLELISM: "-5"
-      STOCK_LIST: "goog,pg,jnj,mmm,ko"
+      STOCK_LIST: "pg,jnj,mmm,ko,goog"
       START_DATE: "01/01/2002"
       END_DATE: "30/11/2022"
       MODE: "NAS"

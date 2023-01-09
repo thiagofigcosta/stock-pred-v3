@@ -121,7 +121,7 @@ def timestampToHumanReadable(timestamp, seconds=True, detailed_text=False):
         if H > 0:
             out += f'{H} hour{"s" if H > 1 else ""} '
         if M > 0:
-            out += f'{M} minutes{"s" if M > 1 else ""} '
+            out += f'{M} minute{"s" if M > 1 else ""} '
         if H > 0 or M > 0:
             out += 'and '
         out += f'{S}.{MS:06} second{"s" if S > 1 or MS > 1 else ""}'

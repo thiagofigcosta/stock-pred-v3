@@ -146,7 +146,7 @@ def fibonacciMovingAverage(data: pd.Series, fibonacci_size=10, weighted=False) -
 
 def enrichTALib(df: pd.DataFrame) -> None:
     # https://mrjbq7.github.io/ta-lib/funcs.html
-    with warnings.catch_warnings():  # dont care about performance now, I just want to make easier to understand
+    with warnings.catch_warnings():  # don't care about performance now, I just want to make easier to understand
         warnings.simplefilter('ignore', category=pd.errors.PerformanceWarning)
         if 'Close' not in df:
             return

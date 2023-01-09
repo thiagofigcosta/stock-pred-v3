@@ -39,6 +39,7 @@ from utils_date import getNowStr, processTime, timestampToHumanReadable
 from utils_fs import createFolder, pathJoin
 from utils_misc import getCpuCount, mergeDicts, getRunId, getRunIdStr, listToChunks, runWithExpRetry
 from utils_persistance import saveJson
+from utils_random import random
 
 EVALUATE_ONE_AT_THE_TIME = False
 
@@ -111,10 +112,11 @@ class NotificationCallback(Callback):
     def notify(self, algorithm):
         if self.verbose:
             time_delta = self.gen_tss[-1] - self.gen_tss[-2]
+            best_sofar = ProphetNAS.parseMetricsList(algorithm.pop.get("F").min(axis=0))
             info(f'Finished generation {self.c_gen[0]}, it took '
                  f'`{timestampToHumanReadable(time_delta, detailed_text=True)}`! '
                  f'There were {self.c_eval[0]} evaluations so far, going until {self.max_eval}, '
-                 f'best result so far: {algorithm.pop.get("F").min(axis=0)}!')
+                 f'best result so far: {best_sofar}!')
 
 
 class DisplayCallback(Callback):
@@ -124,6 +126,7 @@ class DisplayCallback(Callback):
         self.verbose = verbose
         self.progress = ProgressBar() if progress else None
         self.all_updates = []
+        self.shown_exception = False
 
     def update(self, algorithm, **kwargs):
         if self.output is None:
@@ -144,6 +147,9 @@ class DisplayCallback(Callback):
                     self.all_updates.append(text)
             except Exception as e:
                 error(f'Error on DisplayCallback: `{e}`')
+                if not self.shown_exception:
+                    exception(e, False)
+                    self.shown_exception = True
 
     def finalize(self):
         if self.verbose and len(self.all_updates) > 0:
@@ -249,12 +255,15 @@ class ProphetNAS(ProblemClass):
         if type(x) is not dict and len(x.shape) == 2 and x.shape[0] == 1:
             x = x[0]
         if self.parallelism == 1 or type(x) is dict:
+            error_c = 0
             for i, individual in enumerate(x):
                 # train_mode=0 -> train and test
                 metrics = ProphetNAS._trainCallback((i, individual), self.c_gen[0], self.search_space,
                                                     self.processed_data, self.agg_method, train_mode=0,
                                                     n_features=self.n_features)
-                for m, metric in enumerate(metrics):
+                if metrics.get('error', False):
+                    error_c += 1
+                for m, metric in enumerate(ProphetNAS.parseMetricsDict(metrics)):
                     if m < self.n_obj:
                         generation_metrics[m].append(metric)
         else:
@@ -263,17 +272,15 @@ class ProphetNAS(ProblemClass):
             c = [self.processed_data] * len(x)
             d = [self.agg_method] * len(x)
             e = [1] * len(x)  # train_mode=0 -> train
-            f = [self.n_features] * len(x)  # train_mode=0 -> train
+            f = [self.n_features] * len(x)
             with pp.ThreadPool(min(self.parallelism, len(x)), maxtasksperchild=None) as pool:
                 # cannot plot because matplot is not thread safe
                 # outputs = pool.map(ProphetNAS._trainCallback, enumerate(x), a, b, c, d, e, f)
                 success = pool.imap(ProphetNAS._trainCallback, enumerate(x), a, b, c, d, e, f)  # imap is non blocking
                 error_c = 0
                 for ind in success:
-                    if not ind:
+                    if ind.get('error', False):
                         error_c += 1
-                if error_c > 0:
-                    error(f'Got {error_c} errors while evaluating...')
 
             # testing and plotting
             for i, individual in enumerate(x):
@@ -281,9 +288,14 @@ class ProphetNAS(ProblemClass):
                 metrics = ProphetNAS._trainCallback((i, individual), self.c_gen[0], self.search_space,
                                                     self.processed_data,
                                                     self.agg_method, train_mode=2, n_features=self.n_features)
-                for m, metric in enumerate(metrics):
+                if metrics.get('error', False):
+                    error_c += 1
+                for m, metric in enumerate(ProphetNAS.parseMetricsDict(metrics)):
                     if m < self.n_obj:
                         generation_metrics[m].append(metric)
+
+        if error_c > 0:
+            error(f'Got {error_c} errors while evaluating...')
 
         if self.n_obj == 1:
             if type(x) is dict:
@@ -496,9 +508,47 @@ class ProphetNAS(ProblemClass):
         return f'gen={gen}_ind={i}'
 
     @staticmethod
+    def parseMetricsDict(metrics: dict) -> list:
+        metrics = metrics.get('metrics', metrics)
+        keys = ProphetNAS.getMetricsNameFromDict(metrics)
+        out = []
+        for k in keys:
+            out.append(metrics[k])
+        return out
+
+    @staticmethod
+    def parseMetricsList(metrics: list) -> dict:
+        keys = ProphetNAS.getMetricsNameFromDict(ProphetNAS.getMetricsDict(*([None] * 5)))
+        out = {}
+        for k, m in zip(keys, metrics):
+            out[k] = m
+        return out
+
+    @staticmethod
+    def getMetricsNameFromDict(metrics: dict) -> list:
+        metrics = metrics.get('metrics', metrics)
+        keys = sorted(metrics.keys())
+        return keys
+
+    @staticmethod
+    def getMetricsDict(mse, f1, r2, cs, acc):
+        return {
+            'MSE': mse,
+            'F1 Score': f1,
+            'R²': r2,
+            'Cosine Similarity': cs,
+            'Accuracy': acc
+        }
+
+    @staticmethod
     def _trainCallback(i_and_individual: tuple, gen: int, search_space: SearchSpace,
                        processed_data: ProcessedDataset, agg_method: str, train_mode: int,
-                       n_features: Optional[int] = None) -> Union[tuple, bool]:
+                       n_features: Optional[int] = None) -> dict:
+        testing = True
+        if testing:
+            return {
+                'metrics': ProphetNAS.getMetricsDict(random(), random(), ProphetNAS.WORST_VALUE, ProphetNAS.BEST_VALUE,
+                                                     random())}
         i, individual = i_and_individual
         mse = None
         f1 = None
@@ -525,14 +575,15 @@ class ProphetNAS(ProblemClass):
                     s_dir = 'ERROR'
                     createFolder(pathJoin(HYPERPARAMETERS_DIR, s_dir))
                     filepath = hyperparameters.saveJson(subdir=s_dir)
-                    error(f'Error building LSTM network, hyperparameters saved at {filepath}')
-                    raise Exception()
+                    msg = f'Error building LSTM network, hyperparameters saved at {filepath}'
+                    error(msg)
+                    raise AttributeError(msg)
 
                 prophet.train(processed_data.encode(hyperparameters, copy=True), do_log=ProphetNAS.VERBOSE_CALLBACKS)
                 if train_mode == 1:  # just train
                     prophet.save(ignore_error=True, do_log=ProphetNAS.VERBOSE_CALLBACKS)
                     Prophet.destroy(prophet)
-                    return True
+                    return {}
             else:
                 prophet_path = Prophet.genProphetBasename(hyperparameters, basename=hyperparameters.name)
                 prophet = Prophet.load(Prophet.getProphetFilepathFromBasename(prophet_path, getRunIdStr()),
@@ -560,30 +611,34 @@ class ProphetNAS(ProblemClass):
             exception(e, raise_exceptions)
             got_exception = True
             if train_mode == 1:  # just train
-                return False
+                return {'error': True}
         except:
             error('Unknown exception while evaluating!')
             got_exception = True
             if train_mode == 1:  # just train
-                return False
+                return {'error': True}
 
         if got_exception and not made_till_test:
             error('Could not finish evaluating this subject, all metrics are empty due to an exception probably!')
             mse = f1 = r2 = cs = acc = ProphetNAS.WORST_VALUE
-        else:
-            mse = ProphetNAS.parseMetric(mse, True, 'MSE')
-            f1 = ProphetNAS.parseMetric(f1, False, 'F1 Score')
-            r2 = ProphetNAS.parseMetric(r2, False, 'R²')
-            cs = ProphetNAS.parseMetric(cs, False, 'Cosine Similarity')
-            acc = ProphetNAS.parseMetric(acc, False, 'Accuracy')
-        return mse, f1, r2, cs, acc
+
+        mse = ProphetNAS.parseMetric(mse, True, 'MSE')
+        f1 = ProphetNAS.parseMetric(f1, False, 'F1 Score')
+        r2 = ProphetNAS.parseMetric(r2, False, 'R²')
+        cs = ProphetNAS.parseMetric(cs, False, 'Cosine Similarity')
+        acc = ProphetNAS.parseMetric(acc, False, 'Accuracy')
+        out = {
+            'metrics': ProphetNAS.getMetricsDict(mse, f1, r2, cs, acc),
+            'error': got_exception
+        }
+        return out
 
     @staticmethod
     def parseMetric(value: Union[int, float, np.float32], minimization_metric: bool,
                     name: Optional[str] = None) -> Union[int, float, np.float32]:
-        if value is None or value != value or np.isnan(value):
-            value = ProphetNAS.WORST_VALUE
+        if value is None or value != value or np.isnan(value) or np.isinf(value):
             warn(f'Error on {name} metric ({value})!')
+            value = ProphetNAS.WORST_VALUE
         elif not minimization_metric:
             value *= -1  # since this is a minimization problem
         return value

@@ -481,7 +481,7 @@ def removeOutliers(data: Union[list, np.ndarray], factor: float = 4) -> Union[li
     median = np.median(data)
     dist_from_median = np.abs(data - median)
     median_dev = np.median(dist_from_median)  # MAD (median absolute deviation)
-    relative_dist = dist_from_median / median_dev if median_dev else 0
+    relative_dist = dist_from_median / median_dev if median_dev and median_dev != 0 else 0
     filtered = data[relative_dist < factor].reshape(-1)
     if filtered.shape[0] < 2:
         filtered = data

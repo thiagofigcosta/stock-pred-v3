@@ -25,6 +25,11 @@ class Hyperparameters(object):
 
 class Hyperparameters(object):
     DEFAULT = None
+    ARRAY_FEATURES_DELTA_SIZE = {
+        'startswith': {'bidirectional_': -1},
+        'endswith': {'_regularizer': +1},
+        'equals': {},
+    }
 
     def __init__(self,
                  # uuid
@@ -1041,10 +1046,19 @@ bidirectional_layer: {self.network.bidirectional_layer},
         h_layers = hyperparameters_dict['n_hidden_lstm_layers']
         for array_feature in array_features:
             max_size = h_layers
-            if array_feature.endswith('_regularizer'):  # TODO make map to store the size of array features
-                max_size += 1
-            if array_feature.startswith('bidirectional_'):  # TODO make map to store the size of array features
-                max_size = max(0, max_size - 1)
+            for match_type, array_feature_match_and_delta in Hyperparameters.ARRAY_FEATURES_DELTA_SIZE.items():
+                if match_type == 'startswith':
+                    for array_feature_match, array_feature_delta in array_feature_match_and_delta.items():
+                        if array_feature.startswith(array_feature_match):
+                            max_size = max(0, max_size + array_feature_delta)
+                elif match_type == 'endswith':
+                    for array_feature_match, array_feature_delta in array_feature_match_and_delta.items():
+                        if array_feature.endswith(array_feature_match):
+                            max_size = max(0, max_size + array_feature_delta)
+                elif match_type == 'equals':
+                    for array_feature_match, array_feature_delta in array_feature_match_and_delta.items():
+                        if array_feature == array_feature_match:
+                            max_size = max(0, max_size + array_feature_delta)
             hyperparameters_dict[array_feature] = hyperparameters_dict[array_feature][:max_size]
         for dimension in search_space:
             if dimension.data_type == SearchSpace.Type.CONSTANT and dimension.name not in hyperparameters_dict:

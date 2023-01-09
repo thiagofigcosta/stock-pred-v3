@@ -342,6 +342,7 @@ def computeAllManualBinaryMetrics(predictions: list[Union[int, float]], labels: 
         rec = float('-inf')
         f1 = float('-inf')
         cm = None
+    warnings.resetwarnings()
 
     label = f'_{label}' if label is not None else ''
     prefix = f'_{prefix}' if prefix is not None else ''
@@ -363,5 +364,4 @@ def computeAllManualBinaryMetrics(predictions: list[Union[int, float]], labels: 
                    },
                    'cm': cm
                }}
-    warnings.resetwarnings()
     return metrics

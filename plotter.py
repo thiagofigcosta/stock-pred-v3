@@ -1,5 +1,6 @@
 import re
 import threading
+import warnings
 from enum import Enum, auto
 from typing import Optional, Union
 
@@ -9,7 +10,7 @@ from matplotlib import pyplot as plt, pylab
 from matplotlib.backend_bases import FigureManagerBase
 from pymoo.core.plot import Plot
 
-from logger import fatal
+from logger import fatal, warn
 from utils_date import getNowStr
 from utils_fs import createFolder, pathJoin
 from utils_misc import getRunIdStr, runWithExpRetry, size
@@ -297,13 +298,21 @@ def plot(plots: Union[tuple[str, list, dict], list[tuple[str, list, dict]]], mod
     if y_ticks is not None:
         plt.yticks(*y_ticks[:-1], **y_ticks[-1])
     if tight_layout or (type(legend_outside) is bool and legend_outside) or type(legend_outside) is float:
-        if not legend_outside:
-            plt.tight_layout()
-        else:
-            width = FIGURE_EXTRA_WIDTH_RATIO_FOR_LEGEND
-            if type(legend_outside) is float:
-                width += legend_outside
-            plt.tight_layout(rect=[0, 0, width, 1])
+        warnings.filterwarnings("error")
+        try:
+            if not legend_outside:
+                plt.tight_layout()
+            else:
+                width = FIGURE_EXTRA_WIDTH_RATIO_FOR_LEGEND
+                if type(legend_outside) is float:
+                    width += legend_outside
+                plt.tight_layout(rect=[0, 0, width, 1])
+        except Warning as e:
+            warn(f'Tight Layout Issue: title: {title} | x_label: {x_label} | y_label: {y_label} | legend: {legend} | '
+                 f'legend_outside: {legend_outside} | tight_layout: {tight_layout} | file_label: {file_label} | '
+                 f'subdir: {subdir} | file_prefix: {file_prefix}')
+            warn(e)
+        warnings.resetwarnings()
 
     if (type(legend_outside) is bool and legend_outside) or type(legend_outside) is float:
         plt.legend(loc='center left', bbox_to_anchor=(FIGURE_LEGEND_X_ANCHOR, FIGURE_LEGEND_Y_ANCHOR))

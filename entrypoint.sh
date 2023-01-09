@@ -95,8 +95,11 @@ fi
 for stock in "${stocks_array[@]}" ; do 
   el=`echo $el | tr -d '"' | tr '[:upper:]' '[:lower:]'`
   echo "Running stock-pred-v3, the prophet of the stock market for ticker: $stock..."
-  eval "python /code/main.py $stock_pred_v3_args --stock=\"$stock\""
+  cmd="python /code/main.py $stock_pred_v3_args --stock=\"$stock\""
+  echo "cmd: $cmd"
+  eval "$cmd"
   echo "Ran stock-pred-v3, the prophet of the stock market for ticker: $stock!"
+  printf "\n\n\n\n"
 done
 
 
