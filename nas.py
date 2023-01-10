@@ -549,6 +549,7 @@ class ProphetNAS(ProblemClass):
             return {
                 'metrics': ProphetNAS.getMetricsDict(random(), random(), ProphetNAS.WORST_VALUE,
                                                      ProphetNAS.BEST_VALUE, random())}
+        debug_ctx = None
         i, individual = i_and_individual
         mse = None
         f1 = None
@@ -564,6 +565,7 @@ class ProphetNAS(ProblemClass):
             if hyperparameters.name is not None:
                 hyperparameters.name = hyperparameters.name.replace('{gen}', str(gen), 1).replace('{id}', str(i), 1)
                 hyperparameters.refreshUuids()
+                debug_ctx = f'{hyperparameters.name}-{hyperparameters.network_uuid}'
 
             if train_mode <= 1:  # train and test or just train
                 try:
@@ -622,11 +624,11 @@ class ProphetNAS(ProblemClass):
             error('Could not finish evaluating this subject, all metrics are empty due to an exception probably!')
             mse = f1 = r2 = cs = acc = ProphetNAS.WORST_VALUE
 
-        mse = ProphetNAS.parseMetric(mse, True, 'MSE')
-        f1 = ProphetNAS.parseMetric(f1, False, 'F1 Score')
-        r2 = ProphetNAS.parseMetric(r2, False, 'R²')
-        cs = ProphetNAS.parseMetric(cs, False, 'Cosine Similarity')
-        acc = ProphetNAS.parseMetric(acc, False, 'Accuracy')
+        mse = ProphetNAS.parseMetric(mse, True, 'MSE', debug_ctx)
+        f1 = ProphetNAS.parseMetric(f1, False, 'F1 Score', debug_ctx)
+        r2 = ProphetNAS.parseMetric(r2, False, 'R²', debug_ctx)
+        cs = ProphetNAS.parseMetric(cs, False, 'Cosine Similarity', debug_ctx)
+        acc = ProphetNAS.parseMetric(acc, False, 'Accuracy', debug_ctx)
         out = {
             'metrics': ProphetNAS.getMetricsDict(mse, f1, r2, cs, acc),
             'error': got_exception
@@ -635,9 +637,9 @@ class ProphetNAS(ProblemClass):
 
     @staticmethod
     def parseMetric(value: Union[int, float, np.float32], minimization_metric: bool,
-                    name: Optional[str] = None) -> Union[int, float, np.float32]:
+                    name: Optional[str] = None, context: Optional[str] = None) -> Union[int, float, np.float32]:
         if value is None or value != value or np.isnan(value) or np.isinf(value):
-            warn(f'Error on {name} metric ({value})!')
+            warn(f'Error on {name} metric ({value})!{f" {context}" if context is not None else ""}')
             value = ProphetNAS.WORST_VALUE
         elif not minimization_metric:
             value *= -1  # since this is a minimization problem
