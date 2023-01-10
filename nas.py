@@ -544,11 +544,11 @@ class ProphetNAS(ProblemClass):
     def _trainCallback(i_and_individual: tuple, gen: int, search_space: SearchSpace,
                        processed_data: ProcessedDataset, agg_method: str, train_mode: int,
                        n_features: Optional[int] = None) -> dict:
-        testing = True
+        testing = False
         if testing:
             return {
-                'metrics': ProphetNAS.getMetricsDict(random(), random(), ProphetNAS.WORST_VALUE, ProphetNAS.BEST_VALUE,
-                                                     random())}
+                'metrics': ProphetNAS.getMetricsDict(random(), random(), ProphetNAS.WORST_VALUE,
+                                                     ProphetNAS.BEST_VALUE, random())}
         i, individual = i_and_individual
         mse = None
         f1 = None
