@@ -95,7 +95,7 @@ def runNas(ticker: str, start_date: str, end_date: str, ss_id: Union[str, int], 
                                       use_kernel_pca=k_pca, validation_ratio=validation_ratio)
     processed_data, dataset_filepath = runPipeline(ticker, start_date, end_date, dataset_configs, get_path=True,
                                                    encode=False)
-    search_space = getSearchSpaceById(ss_id, dataset_filepath, 'pymoo' + ticker.lower() + '_{gen}_{id}')
+    search_space = getSearchSpaceById(ss_id, dataset_filepath, 'pymoo-' + ticker.lower() + '_{gen}_{id}')
     enriched_search_space = Hyperparameters.enrichSearchSpace(search_space)
     nas_opt = ProphetNAS(enriched_search_space, processed_data, pop_sz, children_sz, rm_duplicates, agg_method,
                          ref_dir_configs)
