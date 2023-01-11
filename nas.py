@@ -517,11 +517,12 @@ class ProphetNAS(ProblemClass):
         return out
 
     @staticmethod
-    def parseMetricsList(metrics: list) -> dict:
-        keys = ProphetNAS.getMetricsNameFromDict(ProphetNAS.getMetricsDict(*([None] * 5)))
+    def parseMetricsList(metrics: list, fix_min_max: bool = True) -> dict:
+        metrics_names_and_types = ProphetNAS.getMetricsDict()
+        keys = ProphetNAS.getMetricsNameFromDict(metrics_names_and_types)
         out = {}
         for k, m in zip(keys, metrics):
-            out[k] = m
+            out[k] = m * metrics_names_and_types[k] if fix_min_max else m
         return out
 
     @staticmethod
@@ -531,7 +532,8 @@ class ProphetNAS(ProblemClass):
         return keys
 
     @staticmethod
-    def getMetricsDict(mse, f1, r2, cs, acc):
+    def getMetricsDict(mse=1, f1=-1, r2=-1, cs=-1, acc=-1):
+        # The default values = 1 if minimization metric, else -1
         return {
             'MSE': mse,
             'F1 Score': f1,
