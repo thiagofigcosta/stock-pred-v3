@@ -10,7 +10,7 @@ from matplotlib import pyplot as plt, pylab
 from matplotlib.backend_bases import FigureManagerBase
 from pymoo.core.plot import Plot
 
-from logger import fatal, warn
+from logger import fatal, warn, verbose
 from utils_date import getNowStr
 from utils_fs import createFolder, pathJoin
 from utils_misc import getRunIdStr, runWithExpRetry, size
@@ -30,6 +30,7 @@ class PlotMode(Enum):
         return list(map(lambda c: c, PlotMode))
 
 
+LOCK_TO_PLOT = True
 DEFAULT_PLOT_MODE = PlotMode.SAVE_TO_FILE
 DEFAULT_BACKEND = None
 MAIN_THREAD_FIGURE_MANAGER = None
@@ -44,7 +45,7 @@ FIGURE_LEGEND_Y_ANCHOR = 0.5
 
 _saved_plots_counter = 0
 _had_a_non_blocking = False
-
+_lock = None
 _current_backend = DEFAULT_BACKEND
 
 
@@ -220,6 +221,29 @@ def getColorGradientsFromIndex(i: int, for_confusion_matrix: bool = False) -> st
     return cmaps[i % len(cmaps)]
 
 
+def getLock() -> threading.Lock:
+    # this should not be need, since we use multiprocess
+    global _lock
+    if _lock is None:
+        _lock = threading.Lock()
+    return _lock
+
+
+def maybeLock(context: str) -> threading.Lock:
+    lock = getLock()
+    if LOCK_TO_PLOT:
+        verbose(f'Acquiring lock to plot - {context}!')
+        lock.acquire()
+    return lock
+
+
+def maybeUnlock(context: str, lock: threading.Lock):
+    if LOCK_TO_PLOT:
+        verbose(f'Releasing lock to plot - {context}!')
+        lock.release()
+    return lock
+
+
 def plot(plots: Union[tuple[str, list, dict], list[tuple[str, list, dict]]], mode: Optional[PlotMode] = None,
          title: Optional[str] = None, x_label: Optional[Union[str, tuple[str, dict]]] = None,
          y_label: Optional[Union[str, tuple[str, dict]]] = None, legend: Union[bool, str, dict] = False,
@@ -233,6 +257,7 @@ def plot(plots: Union[tuple[str, list, dict], list[tuple[str, list, dict]]], mod
     current_backend = getCurrentBackend()
     default_backend = getDefaultBackend()
 
+    lock = maybeLock(file_label)
     maybeSetFigureManager()
 
     if mode is None:
@@ -356,6 +381,7 @@ def plot(plots: Union[tuple[str, list, dict], list[tuple[str, list, dict]]], mod
                         3, raise_it=False)
         clearCurrentFigure()  # to clean up, when show not blocking or saving to file
         plt.figure(dpi=FIGURE_DPI)
+    maybeUnlock(file_label, lock)
 
 
 def showOrSavePymooPlot(the_plot: Plot, label: str, subsubdir: Optional[str] = None, prefix: str = '') -> None:
