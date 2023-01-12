@@ -232,14 +232,14 @@ def getLock() -> threading.Lock:
 def maybeLock(context: str) -> threading.Lock:
     lock = getLock()
     if LOCK_TO_PLOT:
-        verbose(f'Acquiring lock to plot - {context}!')
+        verbose(f'Acquiring lock to plot - {context}!', False)
         lock.acquire()
     return lock
 
 
 def maybeUnlock(context: str, lock: threading.Lock):
     if LOCK_TO_PLOT:
-        verbose(f'Releasing lock to plot - {context}!')
+        verbose(f'Releasing lock to plot - {context}!', False)
         lock.release()
     return lock
 
