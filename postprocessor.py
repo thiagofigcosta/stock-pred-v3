@@ -1,10 +1,12 @@
 import math
 import statistics
+import warnings
 from enum import Enum, auto
 from typing import Optional, Union, Any
 
 import numpy as np
 
+from logger import exception, error, warn
 from metrics import computeAllManualRegressionMetrics, computeAllManualBinaryMetrics
 from preprocessor import DatasetSplit
 from utils_date import timestampToDateObj, timestampToDateStr, SAVE_DATE_FORMAT, getNextWorkDays, dateObjToTimestamp
@@ -481,7 +483,15 @@ def removeOutliers(data: Union[list, np.ndarray], factor: float = 4) -> Union[li
     median = np.median(data)
     dist_from_median = np.abs(data - median)
     median_dev = np.median(dist_from_median)  # MAD (median absolute deviation)
-    relative_dist = dist_from_median / median_dev if median_dev and median_dev != 0 else 0
+    warnings.filterwarnings("error")
+    try:
+        relative_dist = dist_from_median / median_dev if median_dev and median_dev != 0 else 0
+    except RuntimeWarning as w:
+        warn(f'Error {w}: dist_from_median: {dist_from_median}, median_dev: {median_dev}')
+        if not str(w).startswith('overflow encountered in '):
+            exception(w, False)
+        relative_dist = 0
+    warnings.resetwarnings()
     filtered = data[relative_dist < factor].reshape(-1)
     if filtered.shape[0] < 2:
         filtered = data
