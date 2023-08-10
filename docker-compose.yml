@@ -4,13 +4,13 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    restart: always
+    restart: on-failure # `always` makes start on boot
     environment:
       CLEANUP_BEFORE: "False"
       COMPRESS_AFTER: "True"
       NAS_PARALLELISM: "-5"
       LSTM_PARALLELISM: "-5"
-      STOCK_LIST: "pg,jnj,mmm,ko,goog"
+      STOCK_LIST: "goog,pg,jnj,mmm,ko"
       START_DATE: "01/01/2002"
       END_DATE: "30/11/2022"
       MODE: "NAS"
