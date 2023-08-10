@@ -6,7 +6,7 @@ from typing import Optional, Union, Any
 
 import numpy as np
 
-from logger import exception, error, warn
+from logger import exception, warn
 from metrics import computeAllManualRegressionMetrics, computeAllManualBinaryMetrics
 from preprocessor import DatasetSplit
 from utils_date import timestampToDateObj, timestampToDateStr, SAVE_DATE_FORMAT, getNextWorkDays, dateObjToTimestamp

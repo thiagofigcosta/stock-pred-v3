@@ -24,7 +24,7 @@ from tensorflow import keras
 from keras.models import Sequential, load_model
 from keras.utils import plot_model
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint, History
-from keras.layers import LSTM, Dropout, Dense, LeakyReLU, Bidirectional
+from keras.layers import LSTM, Dropout, Dense, LeakyReLU, Bidirectional, CuDNNLSTM
 from keras.optimizers import Adam, SGD, RMSprop
 from keras.callbacks import Callback
 from keras.regularizers import L1L2
@@ -90,6 +90,8 @@ class Prophet(object):
 
     USE_ENHANCED_LOSS = True
     PARALLELISM = 1  # 1 means no parallelism, 0 means all cores
+    USE_cuDNN = False  # The architecture is too complex for that, recurrent_dropout for example is not supported
+    PRINTED_GPU_DATA=False
 
     def __init__(self, basename: str, model: Sequential(), callbacks: list[Callback],
                  configs: Hyperparameters, do_verbose: Optional[bool] = None, path_subdir: str = "",
@@ -109,6 +111,12 @@ class Prophet(object):
         self.path_subdir = path_subdir
         if path_subdir != "":
             Prophet.crateDirs(path_subdir)
+        if not Prophet.PRINTED_GPU_DATA:
+            gpus = tf.config.list_physical_devices('GPU')
+            info(f'GPUs Available: {len(gpus)}')
+            if len(gpus) > 0:
+                for gpu in gpus:
+                    clean(f'\t{gpu}')
 
     def drawAndSaveArchitecture(self, show_types: bool = False, ignore_error: bool = False):
         try:
@@ -565,6 +573,13 @@ class Prophet(object):
         return Prophet.getProphetFilepathFromBasename(self.basename, self.path_subdir)
 
     @staticmethod
+    def getLSTM():
+        if Prophet.USE_cuDNN:
+            return CuDNNLSTM
+        else:
+            return LSTM
+
+    @staticmethod
     def enhancedLoss(loss_name):
         # maybe we could
         def loss(y_true, y_pred):
@@ -728,30 +743,45 @@ class Prophet(object):
                 activation_function = ActivationFunc.LINEAR
             if rec_activation_function == ActivationFunc.LEAKY_RELU:
                 raise ValueError(f'Recurrent activation cannot be {rec_activation_function}')
-            lstm_kwargs = dict(stateful=is_stateful, return_sequences=return_sequences,
-                               use_bias=configs.network.use_bias[l],
-                               activation=activation_function.toKerasName(),
-                               recurrent_activation=rec_activation_function.toKerasName(),
-                               unit_forget_bias=configs.network.unit_forget_bias[l],
-                               recurrent_dropout=configs.network.rec_dropout[l],
-                               go_backwards=configs.network.go_backwards[l], time_major=time_major,
-                               name=f'lstm_{f"h_{l}" if l > 0 else "i"}',
-                               kernel_regularizer=L1L2(l1=configs.network.kernel_l1_regularizer[l],
-                                                       l2=configs.network.kernel_l2_regularizer[l]),
-                               recurrent_regularizer=L1L2(l1=configs.network.recurrent_l1_regularizer[l],
-                                                          l2=configs.network.recurrent_l2_regularizer[l]),
-                               bias_regularizer=L1L2(l1=configs.network.bias_l1_regularizer[l],
-                                                     l2=configs.network.bias_l2_regularizer[l]),
-                               activity_regularizer=L1L2(l1=configs.network.activity_l1_regularizer[l],
-                                                         l2=configs.network.activity_l2_regularizer[l]))
+
+            if Prophet.USE_cuDNN:
+                lstm_kwargs = dict(stateful=is_stateful, return_sequences=return_sequences,
+                                   go_backwards=configs.network.go_backwards[l], time_major=time_major,
+                                   name=f'cuda_lstm_{f"h_{l}" if l > 0 else "i"}',
+                                   kernel_regularizer=L1L2(l1=configs.network.kernel_l1_regularizer[l],
+                                                           l2=configs.network.kernel_l2_regularizer[l]),
+                                   recurrent_regularizer=L1L2(l1=configs.network.recurrent_l1_regularizer[l],
+                                                              l2=configs.network.recurrent_l2_regularizer[l]),
+                                   bias_regularizer=L1L2(l1=configs.network.bias_l1_regularizer[l],
+                                                         l2=configs.network.bias_l2_regularizer[l]),
+                                   activity_regularizer=L1L2(l1=configs.network.activity_l1_regularizer[l],
+                                                             l2=configs.network.activity_l2_regularizer[l]))
+            else:
+                lstm_kwargs = dict(stateful=is_stateful, return_sequences=return_sequences,
+                                   use_bias=configs.network.use_bias[l],
+                                   activation=activation_function.toKerasName(),
+                                   recurrent_activation=rec_activation_function.toKerasName(),
+                                   unit_forget_bias=configs.network.unit_forget_bias[l],
+                                   recurrent_dropout=configs.network.rec_dropout[l],
+                                   go_backwards=configs.network.go_backwards[l], time_major=time_major,
+                                   name=f'lstm_{f"h_{l}" if l > 0 else "i"}',
+                                   kernel_regularizer=L1L2(l1=configs.network.kernel_l1_regularizer[l],
+                                                           l2=configs.network.kernel_l2_regularizer[l]),
+                                   recurrent_regularizer=L1L2(l1=configs.network.recurrent_l1_regularizer[l],
+                                                              l2=configs.network.recurrent_l2_regularizer[l]),
+                                   bias_regularizer=L1L2(l1=configs.network.bias_l1_regularizer[l],
+                                                         l2=configs.network.bias_l2_regularizer[l]),
+                                   activity_regularizer=L1L2(l1=configs.network.activity_l1_regularizer[l],
+                                                             l2=configs.network.activity_l2_regularizer[l]))
             if batch_input_shape is not None:
                 lstm_kwargs['batch_input_shape'] = batch_input_shape
             else:
                 lstm_kwargs['input_shape'] = input_shape
             if l == 0 or not configs.network.bidirectional_layer[l - 1]:
-                model.add(LSTM(configs.network.layer_sizes[l + 1], **lstm_kwargs))
+                model.add(Prophet.getLSTM()(configs.network.layer_sizes[l + 1], **lstm_kwargs))
             else:
-                model.add(Bidirectional(LSTM(configs.network.layer_sizes[l + 1], **lstm_kwargs), name=f'bi_lstm_h_{l}'))
+                model.add(Bidirectional(Prophet.getLSTM()(configs.network.layer_sizes[l + 1], **lstm_kwargs),
+                                        name=f'bi_lstm_h_{l}'))
             if advanced_activation is not None:
                 if advanced_activation == ActivationFunc.LEAKY_RELU:
                     model.add(LeakyReLU(alpha=configs.network.leaky_relu_alpha, name=f'lrelu_{l}'))
@@ -777,8 +807,14 @@ class Prophet(object):
                                     l1=configs.network.activity_l1_regularizer[configs.network.n_hidden_lstm_layers],
                                     l2=configs.network.activity_l2_regularizer[configs.network.n_hidden_lstm_layers])))
             else:
-                model.add(LSTM(configs.network.forward_samples * n_tickers,
-                               activation=output_activation.toKerasName(), time_major=time_major, name='lstm_out'))
+                if Prophet.USE_cuDNN:
+                    model.add(Prophet.getLSTM()(configs.network.forward_samples * n_tickers,
+                                                time_major=time_major,
+                                                name='cuda_lstm_out'))
+                else:
+                    model.add(Prophet.getLSTM()(configs.network.forward_samples * n_tickers,
+                                                activation=output_activation.toKerasName(), time_major=time_major,
+                                                name='lstm_out'))
         else:  # No dense layer for when n_hidden_lstm_layers == 0
             input_shape = (
                 configs.network.backward_samples, n_tickers * input_features_size)
@@ -786,21 +822,29 @@ class Prophet(object):
             if batch_size <= 1:
                 batch_size = None
             batch_input_shape = tuple([batch_size]) + input_shape
-            model.add(LSTM(configs.network.forward_samples * n_tickers,
-                           batch_input_shape=batch_input_shape, activation=output_activation.toKerasName(),
-                           time_major=time_major, name='lstm_out',
-                           kernel_regularizer=L1L2(
-                               l1=configs.network.kernel_l1_regularizer[configs.network.n_hidden_lstm_layers],
-                               l2=configs.network.kernel_l2_regularizer[configs.network.n_hidden_lstm_layers]),
-                           recurrent_regularizer=L1L2(
-                               l1=configs.network.recurrent_l1_regularizer[configs.network.n_hidden_lstm_layers],
-                               l2=configs.network.recurrent_l2_regularizer[configs.network.n_hidden_lstm_layers]),
-                           bias_regularizer=L1L2(
-                               l1=configs.network.bias_l1_regularizer[configs.network.n_hidden_lstm_layers],
-                               l2=configs.network.bias_l2_regularizer[configs.network.n_hidden_lstm_layers]),
-                           activity_regularizer=L1L2(
-                               l1=configs.network.activity_l1_regularizer[configs.network.n_hidden_lstm_layers],
-                               l2=configs.network.activity_l2_regularizer[configs.network.n_hidden_lstm_layers])))
+            model.add(Prophet.getLSTM()(configs.network.forward_samples * n_tickers,
+                                        batch_input_shape=batch_input_shape, activation=output_activation.toKerasName(),
+                                        time_major=time_major, name='lstm_out',
+                                        kernel_regularizer=L1L2(
+                                            l1=configs.network.kernel_l1_regularizer[
+                                                configs.network.n_hidden_lstm_layers],
+                                            l2=configs.network.kernel_l2_regularizer[
+                                                configs.network.n_hidden_lstm_layers]),
+                                        recurrent_regularizer=L1L2(
+                                            l1=configs.network.recurrent_l1_regularizer[
+                                                configs.network.n_hidden_lstm_layers],
+                                            l2=configs.network.recurrent_l2_regularizer[
+                                                configs.network.n_hidden_lstm_layers]),
+                                        bias_regularizer=L1L2(
+                                            l1=configs.network.bias_l1_regularizer[
+                                                configs.network.n_hidden_lstm_layers],
+                                            l2=configs.network.bias_l2_regularizer[
+                                                configs.network.n_hidden_lstm_layers]),
+                                        activity_regularizer=L1L2(
+                                            l1=configs.network.activity_l1_regularizer[
+                                                configs.network.n_hidden_lstm_layers],
+                                            l2=configs.network.activity_l2_regularizer[
+                                                configs.network.n_hidden_lstm_layers])))
 
         if do_log and do_verbose:
             model_summary_lines = []
