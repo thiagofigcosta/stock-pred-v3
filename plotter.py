@@ -1,3 +1,4 @@
+import multiprocessing
 import re
 import threading
 import warnings
@@ -43,10 +44,42 @@ FIGURE_DPI = 150
 FIGURE_LEGEND_X_ANCHOR = 1.0
 FIGURE_LEGEND_Y_ANCHOR = 0.5
 
-_saved_plots_counter = 0
-_had_a_non_blocking = False
-_lock = None
-_current_backend = DEFAULT_BACKEND
+
+class VarsHolder(object):
+    _saved_plots_counter = None
+    _had_a_non_blocking = None
+    _lock = None
+    _current_backend = DEFAULT_BACKEND
+
+    @staticmethod
+    def getSavedPlotsCounter() -> int:
+        if VarsHolder._saved_plots_counter is None:
+            VarsHolder._saved_plots_counter = 0
+        return VarsHolder._saved_plots_counter
+
+    @staticmethod
+    def getSavedPlotsCounter() -> bool:
+        if VarsHolder._had_a_non_blocking is None:
+            VarsHolder._had_a_non_blocking = False
+        return VarsHolder._had_a_non_blocking
+
+    @staticmethod
+    def maybeSetLock(lock: Union[threading.Lock, multiprocessing.Lock]):
+        if VarsHolder._lock is None:
+            VarsHolder._lock = lock
+
+    @staticmethod
+    def getLock(lock: Optional[Union[threading.Lock, multiprocessing.Lock]]) -> \
+            Optional[Union[threading.Lock, multiprocessing.Lock]]:
+        if VarsHolder._lock is not None:
+            VarsHolder.maybeSetLock(lock)
+        return VarsHolder._lock
+
+    @staticmethod
+    def getCurrentBackend() -> str:
+        if VarsHolder._current_backend is not None:
+            VarsHolder._current_backend = DEFAULT_BACKEND
+        return VarsHolder._current_backend
 
 
 def getDefaultBackend():
@@ -57,14 +90,13 @@ def getDefaultBackend():
 
 
 def setCurrentBackend(backend: str):
-    global _current_backend
-    _current_backend = backend
+    VarsHolder._current_backend = backend
 
 
 def getCurrentBackend() -> str:
-    if _current_backend is None:
+    if VarsHolder._current_backend is None:
         setCurrentBackend(getDefaultBackend())
-    return _current_backend
+    return VarsHolder._current_backend
 
 
 def getPlotColorFromIndex(idx: int, colours_to_avoid: Optional[Union[list, str]] = None) -> str:
@@ -92,14 +124,12 @@ def resizeFigure(width: int = FIGURE_WIDTH, height: int = FIGURE_HEIGHT) -> None
 
 def getNextPlotFilepath(prefix: str = 'plot', label: str = '', plot_subdir: Optional[str] = None,
                         add_run_id: bool = True, counter_postfix: bool = False, datetime_postfix: bool = False) -> str:
-    global _saved_plots_counter
-
     if prefix.strip() != '':
         prefix += '-'
     postfix = ''
     if counter_postfix:
-        postfix += f'-{_saved_plots_counter}'
-        _saved_plots_counter += 1
+        postfix += f'-{VarsHolder._saved_plots_counter}'
+        VarsHolder._saved_plots_counter += 1
     if datetime_postfix:
         postfix += f'-{getNowStr(output_format="%d%m%Y%H%M%S")}'
 
@@ -127,7 +157,7 @@ def blockPlots() -> None:
 
 
 def maybeBlockPlots() -> None:
-    if _had_a_non_blocking:
+    if VarsHolder._had_a_non_blocking:
         blockPlots()
 
 
@@ -223,10 +253,9 @@ def getColorGradientsFromIndex(i: int, for_confusion_matrix: bool = False) -> st
 
 def getLock() -> threading.Lock:
     # this should not be need, since we use multiprocess
-    global _lock
-    if _lock is None:
-        _lock = threading.Lock()
-    return _lock
+    if VarsHolder._lock is None:
+        VarsHolder._lock = multiprocessing.Lock()  # threading.Lock()
+    return VarsHolder._lock
 
 
 def maybeLock(context: str) -> threading.Lock:
@@ -253,7 +282,6 @@ def plot(plots: Union[tuple[str, list, dict], list[tuple[str, list, dict]]], mod
          y_ticks: Optional[tuple[Union[list, np.ndarray, dict], ...]] = None, file_label: Optional[str] = None,
          subdir: Optional[str] = None, add_rid_subdir: bool = True, file_prefix: Union[str, bool] = 'plot',
          file_postfix: bool = True, file_datetime_postfix: bool = True, file_counter_postfix: bool = False) -> None:
-    global _had_a_non_blocking
     current_backend = getCurrentBackend()
     default_backend = getDefaultBackend()
 
@@ -359,7 +387,7 @@ def plot(plots: Union[tuple[str, list, dict], list[tuple[str, list, dict]]], mod
             plt.show(block=True)
         else:
             plt.show(block=False)
-            _had_a_non_blocking = True
+            VarsHolder._had_a_non_blocking = True
             clearCurrentFigure()  # to clean up, when show not blocking or saving to file
             plt.figure(dpi=FIGURE_DPI)
     else:
