@@ -198,3 +198,9 @@ Do it manually:
 ```bash
 docker exec -it $(docker container ls | grep docker-root-owned-cleaner | cut -f 1 -d' ' | head -n 1) bash
 ```
+
+## Test GPU on docker
+
+```bash
+docker run -it --gpus all nvidia/cuda:11.4.0-base-ubuntu20.04 nvidia-smi
+```
