@@ -17,6 +17,13 @@ _fibonacci_sequence = None
 
 
 def enrich(filepath: str, force: bool = False, configs: Optional[Hyperparameters] = None) -> str:
+    """
+    Enriches the dataset by creating new features
+    :param filepath: the csv dataset path
+    :param force: if true, forces the enrichment process regardless of it being done before
+    :param configs: experiment hyperparameters, necessary to configure the enrichment
+    :return: returns the path to the enriched csv dataset
+    """
     filename = getBasename(filepath)
     dst_filepath = getEnrichedTickerFilepath(filename)
 
@@ -51,6 +58,10 @@ def enrich(filepath: str, force: bool = False, configs: Optional[Hyperparameters
 
 
 def enrichPriceRatios(df: pd.DataFrame) -> None:
+    """
+    Creates price ratio features on stock dataset
+    :param df: the dataset loaded on pandas dataframe
+    """
     if 'Open' not in df or 'Close' not in df or 'Low' not in df or 'High' not in df:
         pass
     verbose('Enriching price ratios...')
@@ -68,6 +79,10 @@ def enrichPriceRatios(df: pd.DataFrame) -> None:
 
 
 def enrichPriceDeltas(df: pd.DataFrame) -> None:
+    """
+    Creates price delta features on stock dataset, this reduces the dataset entries by one
+    :param df: the dataset loaded on pandas dataframe
+    """
     if 'Close' not in df:
         return
     verbose('Enriching price deltas...')
@@ -80,6 +95,13 @@ def enrichPriceDeltas(df: pd.DataFrame) -> None:
 
 def enrichPriceAverages(df: pd.DataFrame, fast_window: int = 13, slow_window: int = 21,
                         fibonacci_seq_sz: int = 10) -> None:
+    """
+    Creates price moving average features on stock dataset, this reduces the dataset entries by the size of the largest (slow) window
+    :param df: the dataset loaded on pandas dataframe
+    :param fast_window: the size of the fast window
+    :param slow_window: the size of the slow window
+    :param fibonacci_seq_sz: how many fibonacci digits to use for the fibonacci moving average
+    """
     if 'Close' not in df:
         return
     verbose('Enriching price averages on Close price...')
@@ -116,12 +138,23 @@ def enrichPriceAverages(df: pd.DataFrame, fast_window: int = 13, slow_window: in
 
 
 def filterOutNullRows(df: pd.DataFrame) -> None:
+    """
+    Remove out null row from pandas dataset
+    :param df: the dataset loaded on pandas dataframe
+    """
     verbose('Dropping null rows...')
     df.dropna(inplace=True)
     verbose('Dropped null rows!')
 
 
 def fibonacciMovingAverage(data: pd.Series, fibonacci_size=10, weighted=False) -> pd.Series:
+    """
+    Computes the weighted/regular fibonacci moving average for a given data sequence
+    :param data: the data sequence/serie to compute the fibonacci moving average
+    :param fibonacci_size: the amount of fibonacci numbers that will be used to compute the moving average
+    :param weighted: if true, computes weighted fibonacci moving average instead of the regular one
+    :return: the fibonacci moving averages of each point
+    """
     global _fibonacci_sequence
     if _fibonacci_sequence is None or len(_fibonacci_sequence) < fibonacci_size:
         _fibonacci_sequence = getFibonacciSeq(fibonacci_size + 1)[1:]  # span must be >=1
@@ -145,7 +178,10 @@ def fibonacciMovingAverage(data: pd.Series, fibonacci_size=10, weighted=False) -
 
 
 def enrichTALib(df: pd.DataFrame) -> None:
-    # https://mrjbq7.github.io/ta-lib/funcs.html
+    """
+    Enrich the stock dataset using features available on the TA-Lib - https://mrjbq7.github.io/ta-lib/funcs.html
+    :param df: the dataset loaded on pandas dataframe
+    """
     with warnings.catch_warnings():  # don't care about performance now, I just want to make easier to understand
         warnings.simplefilter('ignore', category=pd.errors.PerformanceWarning)
         if 'Close' not in df:

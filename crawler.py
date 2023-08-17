@@ -16,6 +16,15 @@ _is_null_or_nan_field_c_regex = re.compile(r'((.*null|nan),.*|.*,(null|nan).*)',
 
 def downloadTicker(ticker: str, start_date: Optional[str] = None, end_date: Optional[str] = None,
                    force: bool = False, configs: Optional[Hyperparameters] = None) -> str:
+    """
+    Downloads csv file with historical price and other features of a given ticker/stock.
+    :param ticker: the stock or ticker letter code, e.g. GOOG
+    :param start_date: data start date, dd/mm/yyy
+    :param end_date: data end date, dd/mm/yyy
+    :param force: force the download even if the file was previously downloaded
+    :param configs: experiment hyperparameters to get an uuid from, which avoid file conflicts
+    :return: the downloaded filepath with the uuid. to get the real filepath use `getBasename(filepath)`
+    """
     if start_date is None:
         start_date = '01/01/1970'
     if end_date is None:
@@ -49,6 +58,11 @@ def downloadTicker(ticker: str, start_date: Optional[str] = None, end_date: Opti
 
 
 def filterOutNullLines(content: str) -> str:
+    """
+    Remove null and invalid lines from the dataset
+    :param content: csv content loaded on string
+    :return: filtered csv content loaded on string
+    """
     verbose('Dropping null rows...')
     lines = content.split('\n')
     content = ''
