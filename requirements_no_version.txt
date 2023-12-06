@@ -60,8 +60,9 @@ requests-oauthlib
 rsa
 scikit-learn
 scipy
+silence_tensorflow
 six
-sklearn
+nvidia-cudnn-cu11
 TA-Lib
 tensorboard
 tensorboard-data-server

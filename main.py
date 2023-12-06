@@ -1,3 +1,4 @@
+import faulthandler
 import argparse
 import sys
 from typing import Optional, Union
@@ -12,6 +13,7 @@ from prophet import Prophet
 from search_space import getSearchSpaceById
 from utils_date import getDiffInYearsFromStrDate
 from utils_misc import isAppleSilicon
+from utils_misc import maybeSilenceTf
 
 
 def dataMiningPreset() -> list:
@@ -51,14 +53,13 @@ def runNas(ticker: str, start_date: str, end_date: str, ss_id: Union[str, int], 
            fib_sz: Optional[int] = 20, k_pca: bool = True, nas_parallelism: Optional[int] = None,
            lstm_parallelism: Optional[int] = None, nas_verbose: bool = True, lstm_verbose: bool = False,
            silence: bool = True) -> list:
+
+    maybeSilenceTf(silence)
+    
     if silence:
         from pymoo.config import Config
         Config.warnings['not_compiled'] = False
-        import tensorflow as tf
-        import logging
-        tf.get_logger().setLevel('ERROR')
-        tf.autograph.set_verbosity(3)
-        tf.get_logger().setLevel(logging.ERROR)
+
     level = logger.Level.VERBOSE if nas_verbose or lstm_verbose else logger.Level.INFO
     logger.configure(name='stock-pred-v3-nas', level=level)
     if train_ratio is None or validation_ratio is None:
@@ -127,6 +128,16 @@ def getArgumentParser(prog: str) -> argparse.ArgumentParser:
         sub_p.add_argument('--agg_method', type=str, default='VOTING_EXP_F_WEIGHTED_AVERAGE',
                            help='The method of uniting redundant previsions', metavar='agg')
         sub_p.add_argument('--lstm_p', type=int, help='Parallelism for LSTM Networks', metavar='lstm_cores')
+        sub_p.add_argument('--faulthandler', action='store_true', default=False,
+                           help='Enables faulthandler')
+        sub_p.add_argument('--tf-exp-opt-off', action='store_true', default=False,
+            help='Disables tensorflow experimental optimisations')
+        sub_p.add_argument('--tf-onednn-off', action='store_true', default=False,
+            help='Disables tensorflow onednn optimisations')
+        sub_p.add_argument('--tf-gpu-off', action='store_true', default=False,
+            help='Disables tensorflow GPU')
+        sub_p.add_argument('--tf-mixed-precision', action='store_true', default=False,
+            help='Enables tensorflow float16 mixed precision')
 
     # nas mode args
     nas_parser.add_argument('--ss_id', required=True, type=str, help='The search space for the NAS',
@@ -160,6 +171,12 @@ def main(argv):
         info('Received the following args')
         logDict(args.__dict__, 'Arguments')
         return
+
+    if args.faulthandler:
+        info('Enabling `faulthandler`')
+        faulthandler.enable()
+
+    Prophet.setupTF(set_epsilon = True, disable_exp_options = args.tf_exp_opt_off, disable_onednn=args.tf_onednn_off, mixed_precision = args.tf_mixed_precision, disable_gpu = args.tf_gpu_off, force = True)
 
     if mode == 'nas':
         stocks = args.stock.split(',')

@@ -13,18 +13,20 @@ from preprocessor import ProcessedDataset, DatasetSplit
 from prophet_enums import Optimizer, ActivationFunc
 from transformer import getTransformedTickerFilepath
 from utils_date import getNowStr
-from utils_fs import createFolder, pathJoin, removeFileExtension, getBasename, pathExists, copyFile, deleteFile, \
+from utils_fs import createFolder, pathJoin, removeFileExtension, getBasename, pathExists, copyPath, deletePath, \
     moveFile
 from utils_misc import numpyToListRecursive, listToChunks, getNumericTypes, getCpuCount, getRunIdStr, runWithExpRetry
 from utils_persistance import saveJson, loadJson, loadObj
-
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # DISABLE TENSORFLOW WARNING
+from threading import Lock
+from utils_misc import maybeSilenceTf
+maybeSilenceTf()
 import tensorflow as tf
 from tensorflow import keras
 from keras.models import Sequential, load_model
 from keras.utils import plot_model
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint, History
-from keras.layers import LSTM, Dropout, Dense, LeakyReLU, Bidirectional, CuDNNLSTM
+from keras.layers import LSTM, Dropout, Dense, LeakyReLU, Bidirectional
+# from keras.layers import CuDNNLSTM
 from keras.optimizers import Adam, SGD, RMSprop
 from keras.callbacks import Callback
 from keras.regularizers import L1L2
@@ -35,7 +37,9 @@ ARCHITECTURE_SUBDIR = 'architecture'
 HISTORY_SUBDIR = 'history'
 METRICS_SUBDIR = 'metrics'
 PROPHET_DIR = 'prophets'
+SAVED_MODEL_EXTENSION='.tf'
 
+mutex = Lock()
 
 class CustomCallback(Callback):
     other_cb_functions = """
@@ -91,7 +95,8 @@ class Prophet(object):
     USE_ENHANCED_LOSS = True
     PARALLELISM = 1  # 1 means no parallelism, 0 means all cores
     USE_cuDNN = False  # The architecture is too complex for that, recurrent_dropout for example is not supported
-    PRINTED_GPU_DATA=False
+    PRINTED_TF_INFO=False
+    TF_INITIAL_SETUP=False
 
     def __init__(self, basename: str, model: Sequential(), callbacks: list[Callback],
                  configs: Hyperparameters, do_verbose: Optional[bool] = None, path_subdir: str = "",
@@ -109,14 +114,24 @@ class Prophet(object):
             do_verbose = getVerbose()
         self.verbose = do_verbose
         self.path_subdir = path_subdir
-        if path_subdir != "":
-            Prophet.crateDirs(path_subdir)
-        if not Prophet.PRINTED_GPU_DATA:
-            gpus = tf.config.list_physical_devices('GPU')
-            info(f'GPUs Available: {len(gpus)}')
-            if len(gpus) > 0:
-                for gpu in gpus:
-                    clean(f'\t{gpu}')
+
+        with mutex:
+            if path_subdir != "":
+                Prophet.crateDirs(path_subdir)
+            if not Prophet.PRINTED_TF_INFO:
+                print('Tensforflow build info:')
+                for k,v in tf.sysconfig.get_build_info().items():
+                    if type(v) is list:
+                        v = ', '.join(v)
+                    print(f'\t{k.replace("_", " ").title()}: {v}')
+
+
+                gpus = tf.config.list_physical_devices('GPU')
+                info(f'GPUs Available: {len(gpus)}')
+                if len(gpus) > 0:
+                    for gpu in gpus:
+                        clean(f'\t{gpu}')
+                Prophet.PRINTED_TF_INFO = True
 
     def drawAndSaveArchitecture(self, show_types: bool = False, ignore_error: bool = False):
         try:
@@ -201,11 +216,11 @@ class Prophet(object):
                 self.model.set_weights(loaded_model.get_weights())
             if pathExists(self.getModelFilepath()):
                 moveFile(self.getModelFilepath(), self.getOverwrittenByCpModelFilepath())
-            copyFile(cp_filepath, self.getModelFilepath())
+            copyPath(cp_filepath, self.getModelFilepath())
             if pathExists(self.getMetricsFilepath()):
                 moveFile(self.getMetricsFilepath(), self.getOverwrittenByCpMetricsFilepath())
             if delete_cp_after:
-                deleteFile(cp_filepath)
+                deletePath(cp_filepath)
             info(f'Restored {getBasename(cp_filepath)} checkpoint!', do_log)
 
     def train(self, processed_data: ProcessedDataset, do_plot: bool = True, do_log: bool = True) -> dict:
@@ -640,7 +655,7 @@ class Prophet(object):
         filename_no_ext = removeFileExtension(basename)
         filename_changed = ''
         if not filename_no_ext.strip().endswith('.') and filename_no_ext.strip() != '':
-            filename_changed = f'{filename_no_ext}.h5'
+            filename_changed = f'{filename_no_ext}{SAVED_MODEL_EXTENSION}'
         return pathJoin(MODELS_DIR, path_subdir, filename_changed)
 
     @staticmethod
@@ -650,7 +665,7 @@ class Prophet(object):
         if not filename_no_ext.strip().endswith('.') and filename_no_ext.strip() != '':
             # '_{epoch:06d}_{val_loss}' # placeholders for keras
             keras_placeholders = ''
-            filename_changed = f'{filename_no_ext}' + keras_placeholders + '_cp.h5'
+            filename_changed = f'{filename_no_ext}{keras_placeholders}_cp{SAVED_MODEL_EXTENSION}'
         return pathJoin(MODELS_DIR, path_subdir, CHECKPOINT_SUBDIR, filename_changed)
 
     @staticmethod
@@ -658,7 +673,7 @@ class Prophet(object):
         filename_no_ext = removeFileExtension(basename)
         filename_changed = ''
         if not filename_no_ext.strip().endswith('.') and filename_no_ext.strip() != '':
-            filename_changed = f'{filename_no_ext}_last_patience_model.h5'
+            filename_changed = f'{filename_no_ext}_last_patience_model{SAVED_MODEL_EXTENSION}'
         return pathJoin(MODELS_DIR, path_subdir, CHECKPOINT_SUBDIR, filename_changed)
 
     @staticmethod
@@ -714,6 +729,7 @@ class Prophet(object):
     def build(configs: Hyperparameters, basename: Optional[str] = None, workaround_for_eval: bool = False,
               do_log: bool = True, counter_on_basename: bool = True, do_verbose: bool = True,
               path_subdir: str = '', ignore_save_error: bool = False) -> Prophet:
+        Prophet.setupTF()
         basename = Prophet.genProphetBasename(configs, basename, include_counter=counter_on_basename)
         info(f'Building {basename} prophet...', do_log)
         n_tickers = 1  # TODO support for training stocks together
@@ -882,6 +898,7 @@ class Prophet(object):
 
     @staticmethod
     def load(prophet_filepath: str, do_log: bool = True, do_verbose: bool = True, path_subdir: str = "") -> Prophet:
+        Prophet.setupTF()
         info(f'Loading prophet from `{prophet_filepath}`...', do_log)
         prophet_meta = runWithExpRetry(f'LoadProphet', loadJson, [prophet_filepath], {}, 3)
         basename = prophet_meta['basename']
@@ -923,6 +940,52 @@ class Prophet(object):
         callbacks.append(reset_states_after_epoch)
         return callbacks
 
+    @staticmethod
+    def setupTF(set_epsilon = True, disable_exp_options = False, disable_onednn = False, mixed_precision = False, disable_gpu = False, force = False):
+        if Prophet.TF_INITIAL_SETUP and not force:
+            return
+        Prophet.TF_INITIAL_SETUP = True
 
-tf.keras.backend.set_epsilon(EPSILON)
+        if set_epsilon:
+            tf.keras.backend.set_epsilon(EPSILON)
+
+        if mixed_precision:
+            from tensorflow.keras import mixed_precision
+            policy = mixed_precision.Policy('mixed_float16')
+            mixed_precision.set_global_policy(policy)
+
+
+        import os
+        if disable_exp_options:
+            tf.config.optimizer.set_experimental_options({
+                'constant_folding': False,
+                'layout_optimizer': False,
+                'shape_optimization': False,
+                'remapping': False,
+                'arithmetic_optimization': False,
+                'dependency_optimization': False,
+                'loop_optimization': False,
+                'function_optimization': False,
+                'debug_stripper': False,
+                'disable_model_pruning': False,
+                'scoped_allocator_optimization': False,
+                'pin_to_host_optimization': False,
+                'implementation_selector': False,
+                'auto_mixed_precision': False,
+                'disable_meta_optimizer': False,
+                'min_graph_nodes': False
+            })
+
+        if disable_onednn:
+            os.environ['TF_ENABLE_ONEDNN_OPTS'] = "0" # disables ONEDNN
+
+        if disable_gpu:
+            tf.config.experimental.set_visible_devices([], 'GPU') # disable gpu
+            os.environ['CUDA_VISIBLE_DEVICES'] = "-1" # disables GPUs
+
+
+
+
+
+
 Prophet.crateDirs('')

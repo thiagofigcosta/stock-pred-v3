@@ -15,7 +15,7 @@ from pymoo.core.mixed import MixedVariableSampling, MixedVariableMating, MixedVa
 from pymoo.core.problem import ElementwiseProblem, Problem
 from pymoo.core.result import Result
 from pymoo.core.variable import Integer, Real, Binary, Choice
-from pymoo.factory import get_reference_directions
+from pymoo.util.ref_dirs import get_reference_directions
 from pymoo.optimize import minimize
 from pymoo.util.display.progress import ProgressBar
 from pymoo.visualization.heatmap import Heatmap
@@ -273,7 +273,7 @@ class ProphetNAS(ProblemClass):
             d = [self.agg_method] * len(x)
             e = [1] * len(x)  # train_mode=0 -> train
             f = [self.n_features] * len(x)
-            with pp.ThreadPool(min(self.parallelism, len(x)), maxtasksperchild=None) as pool:
+            with pp.ThreadPool(min(self.parallelism, len(x))) as pool: # , maxtasksperchild=None
                 # cannot plot because matplot is not thread safe
                 # outputs = pool.map(ProphetNAS._trainCallback, enumerate(x), a, b, c, d, e, f)
                 success = pool.imap(ProphetNAS._trainCallback, enumerate(x), a, b, c, d, e, f)  # imap is non blocking

@@ -391,7 +391,7 @@ def getSearchSpace(dataset_filename: Optional[str] = None, name: Optional[str] =
     ss.add(name='stateful', data_type=SSpaceType.BOOLEAN)
     ss.add(name='batch_size', data_type=SSpaceType.INT, min_value=0, max_value=128)
     ss.add(name='dense_instead_lstm_on_out', data_type=SSpaceType.BOOLEAN)
-    ss.add(name='patience_epochs_stop', data_type=SSpaceType.INT, min_value=80, max_value=1000)
+    ss.add(name='patience_epochs_stop', data_type=SSpaceType.INT, min_value=300, max_value=1000)
     ss.add(name='patience_epochs_reduce', data_type=SSpaceType.INT, min_value=0, max_value=400)
     ss.add(name='reduce_factor', data_type=SSpaceType.FLOAT, min_value=0, max_value=0.2)
     ss.add(name='optimizer', data_type=SSpaceType.INT, **getEnumRange(Optimizer))

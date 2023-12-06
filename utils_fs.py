@@ -34,10 +34,16 @@ def deleteFile(filepath: str) -> bool:
         return True
     return False
 
-
 def copyFile(src_filepath: str, dst_filepath: str) -> bool:
     if pathExists(src_filepath) and not pathExists(dst_filepath):
         shutil.copy(src_filepath, dst_filepath)
+        return True
+    return False
+
+
+def copyFolder(src_dirpath: str, dst_dirpath: str) -> bool:
+    if pathExists(src_dirpath) and not pathExists(dst_dirpath):
+        shutil.copytree(src_dirpath, dst_dirpath)
         return True
     return False
 
@@ -62,6 +68,14 @@ def isFile(filepath: str) -> bool:
 
 def isFolder(filepath: str) -> bool:
     return os.path.isdir(filepath)
+
+
+def copyPath(src_filepath: str, dst_filepath: str) -> bool:
+    if isFolder(src_filepath):
+        return copyFolder(src_filepath, dst_filepath)
+    elif isFile(src_filepath):
+        return copyFile(src_filepath, dst_filepath)
+    return False 
 
 
 def deletePath(filepath: str) -> bool:

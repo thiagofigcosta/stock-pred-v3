@@ -8,11 +8,11 @@ services:
     environment:
       CLEANUP_BEFORE: "False"
       COMPRESS_AFTER: "True"
-      NAS_PARALLELISM: "-5"
-      LSTM_PARALLELISM: "-5"
+      NAS_PARALLELISM: "0"
+      LSTM_PARALLELISM: "0"
       STOCK_LIST: "goog,pg,jnj,mmm,ko"
       START_DATE: "01/01/2002"
-      END_DATE: "30/11/2022"
+      END_DATE: "31/12/2022"
       MODE: "NAS"
       SS_ID: "LessNodeTypes"
       POP_SZ: "70"
@@ -36,7 +36,6 @@ services:
         reservations:
           devices:
             - driver: nvidia
-              count: 1
               capabilities: [gpu]
         limits:
           cpus: "36"

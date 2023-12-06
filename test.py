@@ -1,4 +1,6 @@
 import numpy as np
+from utils_misc import maybeSilenceTf
+maybeSilenceTf()
 import tensorflow as tf
 
 import logger

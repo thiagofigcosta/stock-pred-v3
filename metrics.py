@@ -4,15 +4,15 @@ import warnings
 from enum import Enum, auto
 from typing import Union, Callable, Optional
 
+from utils_misc import size
+from utils_misc import maybeSilenceTf
+maybeSilenceTf()
+import tensorflow as tf
+
 import numpy as np
 from keras.metrics import RootMeanSquaredError
 from sklearn import metrics as sk_metrics
 from sklearn.exceptions import UndefinedMetricWarning
-
-from utils_misc import size
-
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # DISABLE TENSORFLOW WARNING
-import tensorflow as tf
 
 EPSILON = 1e-06
 DROP_NAN_BEFORE_COMPUTE_METRICS = True

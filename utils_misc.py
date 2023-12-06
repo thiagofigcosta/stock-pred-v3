@@ -347,3 +347,20 @@ def minMaxScale(array: Union[list, set, np.ndarray]) -> tuple:
     max_v = max(array)
     scaled = scaleArray(array, min_v, max_v)
     return scaled, (min_v, max_v)
+
+
+def maybeSilenceTf(force = False):
+    import os
+    if os.environ.get('TF_LOG_OFF', "False").lower() == "true":
+        os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # DISABLE TENSORFLOW WARNING
+        
+        import logging
+        logging.getLogger('tensorflow').disabled = True
+        logging.getLogger('tensorflow').setLevel(logging.ERROR)
+        from silence_tensorflow import silence_tensorflow
+        silence_tensorflow()
+
+        import tensorflow as tf
+        tf.get_logger().setLevel('ERROR')
+        tf.autograph.set_verbosity(3)
+        tf.get_logger().setLevel(logging.ERROR)

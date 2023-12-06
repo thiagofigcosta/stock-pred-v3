@@ -3,13 +3,13 @@ services:
   stock-prev-v3-the-prophet:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.tf2
     restart: on-failure # `always` makes start on boot
     environment:
       CLEANUP_BEFORE: "False"
       COMPRESS_AFTER: "True"
-      NAS_PARALLELISM: "2" # -2
-      LSTM_PARALLELISM: "-2" # 1
+      NAS_PARALLELISM: "1"
+      LSTM_PARALLELISM: "0"
       STOCK_LIST: "goog,pg,jnj,mmm,ko"
       START_DATE: "01/01/2002"
       END_DATE: "31/12/2022"
@@ -21,11 +21,9 @@ services:
       NAS_OBJ: "5"
       NAS_REF_DIRS_CONF: "(-1, 1)"
       AGG_METHOD: "VOTING_MEDIAN"
-      TF_ENABLE_ONEDNN_OPTS: "0"
       FAULT_HANDLER: "True"
-      TF_LOG_OFF: "True"
       TF_EXP_OPT_OFF: "True"
-      TF_GPU_OFF: "True" # disables GPUs
+      # TF_LOG_OFF: "True"
     volumes:
       - ./datasets:/code/datasets
       - ./hyperparameters:/code/hyperparameters
@@ -37,7 +35,10 @@ services:
       - ./experiments:/code/experiments
     deploy:
       replicas: 1
-      # resources:
-      #   limits:
-      #     cpus: "36"
-      #     memory: 150G
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [gpu]
+        limits:
+          memory: 60G

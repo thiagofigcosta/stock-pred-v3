@@ -62,6 +62,31 @@ if [[ "$DRY_RUN" = [tT][rR][uU][eE] ]] ; then
   stock_pred_v3_args="$stock_pred_v3_args --dry_run"
 fi
 
+
+if [[ "$FAULT_HANDLER" = [tT][rR][uU][eE] ]] ; then
+  stock_pred_v3_args="$stock_pred_v3_args --faulthandler"
+fi
+
+
+if [[ "$TF_EXP_OPT_OFF" = [tT][rR][uU][eE] ]] ; then
+  stock_pred_v3_args="$stock_pred_v3_args --tf-exp-opt-off"
+fi
+
+
+if [[ "$TF_MIXED_PRECISION" = [tT][rR][uU][eE] ]] ; then
+  stock_pred_v3_args="$stock_pred_v3_args --tf-mixed-precision"
+fi
+
+if [[ "$TF_GPU_OFF" = [tT][rR][uU][eE] ]] ; then
+  stock_pred_v3_args="$stock_pred_v3_args --tf-gpu-off"
+fi
+
+
+if [[ "$TF_ONEDNN_OFF" = [tT][rR][uU][eE] ]] ; then
+  stock_pred_v3_args="$stock_pred_v3_args --tf-onednn-off"
+fi
+
+
 if [ ! -z ${SS_ID+x} ] && [ ! -z "$SS_ID" ] ; then # keep the +x
   ss_id=`echo $SS_ID | tr -d '"' | tr '[:upper:]' '[:lower:]'`
   stock_pred_v3_args="$stock_pred_v3_args --ss_id=\"$ss_id\""
